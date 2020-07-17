@@ -34,7 +34,7 @@ import logging
 import json
 
 from awsssolib.awsssolib import Sso
-from .core import Entity
+from awsauthenticatorlib import LoggerMixin
 
 __author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -52,12 +52,26 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
+class Entity(LoggerMixin):  # pylint: disable=too-few-public-methods
+    """The core object of okta."""
+
+    def __init__(self, sso_instance, data):
+        self._sso = sso_instance
+        self._data = self._parse_data(data)
+
+    def _parse_data(self, data):
+        if not isinstance(data, dict):
+            self.logger.error('Invalid data received :{}'.format(data))
+            data = {}
+        return data
+
+
 class Group(Entity):
     """Models the group object of AWS SSO."""
 
     def __init__(self, sso_instance, data):
-        Entity.__init__(self, sso_instance, data)
-        self.url = f'https://{sso_instance.aws_region}.console.aws.amazon.com/singlesignon/api/userpool'
+        super().__init__(sso_instance, data)
+        self.url = f'{sso_instance.api_url}/userpool'
 
     @property
     def id(self):  # pylint: disable=invalid-name
@@ -113,8 +127,8 @@ class Account(Entity):
     """Models the Account object of AWS SSO."""
 
     def __init__(self, sso_instance, data):
-        Entity.__init__(self, sso_instance, data)
-        self.url = f'https://{sso_instance.aws_region}.console.aws.amazon.com/singlesignon/api/peregrine'
+        super().__init__(sso_instance, data)
+        self.url = sso_instance.endpoint_url
 
     @property
     def name(self):
@@ -209,8 +223,8 @@ class User(Entity):
     """Models the user object of SSO."""
 
     def __init__(self, sso_instance, data):
-        Entity.__init__(self, sso_instance, data)
-        self.url = f'https://{sso_instance.aws_region}.console.aws.amazon.com/singlesignon/api/userpool'
+        super().__init__(sso_instance, data)
+        self.url = f'{sso_instance.api_url}/userpool'
 
     @property
     def status(self):
@@ -326,7 +340,7 @@ class PermissionSet(Entity):
     """Models the permissionset object of SSO."""
 
     def __init__(self, sso_instance, data):
-        Entity.__init__(self, sso_instance, data)
+        super().__init__(sso_instance, data)
         self.url = sso_instance.endpoint_url
 
     @property
