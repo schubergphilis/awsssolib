@@ -441,10 +441,7 @@ class Sso(LoggerMixin):
         return response.ok
 
     def _list_accounts_pagination(self, next_token=None):
-        if not next_token:
-            content_string = {}
-        else:
-            content_string = {'NextToken': next_token}
+        content_string = {} if not next_token else {'NextToken': next_token}
         payload = {'contentString': json.dumps(content_string),
                    'headers': {'Content-Type': 'application/x-amz-json-1.1',
                                'Content-Encoding': "amz-1.0",
@@ -461,13 +458,10 @@ class Sso(LoggerMixin):
         return [Account(self, data) for data in response.json().get('Accounts')], response.json().get('NextToken', '')
 
     def _list_users_pagination(self, next_token=None):
-        if not next_token:
-            content_string = {"IdentityStoreId": self.sso_directory_id,
-                              "MaxResults": 25}
-        else:
-            content_string = {"IdentityStoreId": self.sso_directory_id,
-                              "MaxResults": 25,
-                              "NextToken": next_token}
+        content_string = {"IdentityStoreId": self.sso_directory_id,
+                          "MaxResults": 25}
+        if next_token:
+            content_string.update({'NextToken': next_token})
         payload = Sso.get_api_payload(content_string=content_string,
                                       target='SearchUsers',
                                       path='/identitystore/',
@@ -483,16 +477,11 @@ class Sso(LoggerMixin):
 
         url = 'https://eu-west-1.console.aws.amazon.com/singlesignon/api/userpool'
         self.logger.debug('Trying to get group list in sso')
-        if not next_token:
-            content_string = {"SearchString": "*",
-                              "SearchAttributes": ["GroupName"],
-                              "MaxResults": 100}
-        else:
-            content_string = {"SearchString": "*",
-                              "SearchAttributes": ["GroupName"],
-                              "MaxResults": 100,
-                              "NextToken": next_token
-                              }
+        content_string = {"SearchString": "*",
+                          "SearchAttributes": ["GroupName"],
+                          "MaxResults": 100}
+        if next_token:
+            content_string.update({'NextToken': next_token})
         payload = Sso.get_api_payload(content_string=content_string,
                                       target='SearchGroups',
                                       path='/userpool/',
