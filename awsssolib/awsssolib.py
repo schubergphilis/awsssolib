@@ -208,7 +208,7 @@ class Sso(LoggerMixin):
             User: The User object
 
         """
-        return next((user for user in self.users if user.name == user_name), {})
+        return next((user for user in self.users if user.name == user_name), None)
 
     def get_user_by_id(self, user_id):
         """The user configured in SSO.
@@ -217,7 +217,7 @@ class Sso(LoggerMixin):
             User: The User object
 
         """
-        return next((user for user in self.users if user.id == user_id), {})
+        return next((user for user in self.users if user.id == user_id), None)
 
     def get_group_by_name(self, group_name):
         """The group configured in SSO.
@@ -226,7 +226,7 @@ class Sso(LoggerMixin):
             Group: The Group object
 
         """
-        return next((group for group in self.groups if group.name == group_name), {})
+        return next((group for group in self.groups if group.name == group_name), None)
 
     def get_group_by_id(self, group_id):
         """The group configured in SSO.
@@ -235,7 +235,7 @@ class Sso(LoggerMixin):
             Group: The Group object
 
         """
-        return next((group for group in self.groups if group.id == group_id), {})
+        return next((group for group in self.groups if group.id == group_id), None)
 
     def get_account_by_name(self, account_name):
         """The account configured in SSO.
@@ -244,7 +244,7 @@ class Sso(LoggerMixin):
             Account: The Account object
 
         """
-        return next((account for account in self.accounts if account.name == account_name), {})
+        return next((account for account in self.accounts if account.name == account_name), None)
 
     def get_account_by_id(self, account_id):
         """The account configured in SSO.
@@ -253,7 +253,7 @@ class Sso(LoggerMixin):
             Account: The Account object
 
         """
-        return next((account for account in self.accounts if account.id == account_id), {})
+        return next((account for account in self.accounts if account.id == account_id), None)
 
     def get_permission_set_by_name(self, permission_set_name):
         """The permission-set configured in SSO.
@@ -264,7 +264,7 @@ class Sso(LoggerMixin):
         """
         return next(
             (permission_set for permission_set in self.permission_sets if permission_set.name == permission_set_name),
-            {})
+            None)
 
     def _provision_application_profile_for_aws_account_instance(self, permission_set_name, account_name):
         method = 'ProvisionApplicationProfileForAWSAccountInstance'
