@@ -33,9 +33,8 @@ Main code for awsssolib.
 
 import logging
 import json
-from awsauthenticatorlib import AwsAuthenticator, LoggerMixin
-from awsssolib.configuration import RELAY_STATE
-from .utils import get_api_payload
+from awsauthenticatorlib import AwsAuthenticator, LoggerMixin, Urls
+from awsssolib.configuration import SUPPORTED_TARGETS, RELAY_STATE
 from .entities import (Group,
                        User,
                        Account,
@@ -62,7 +61,9 @@ class Sso(LoggerMixin):
 
     def __init__(self, arn):
         self.aws_authenticator = AwsAuthenticator(arn)
-        self.url = f'https://{self.aws_region}.console.aws.amazon.com/singlesignon/api/peregrine'
+        self._urls = Urls(self.aws_region)
+        self.api_url = f'{self._urls.regional_single_sign_on}/api'
+        self.endpoint_url = f'{self.api_url}/peregrine'
         self.session = self._get_authenticated_session()
 
     @property
@@ -75,6 +76,39 @@ class Sso(LoggerMixin):
         """
         return self.aws_authenticator.region
 
+    @staticmethod
+    def get_api_payload(content_string,  # pylint: disable=too-many-arguments
+                        target, method='POST',
+                        params=None,
+                        path='/',
+                        content_type=API_CONTENT_TYPE,
+                        content_encoding=API_CONTENT_ENCODING,
+                        x_amz_target='',
+                        region=DEFAULT_AWS_REGION):
+        """Generates the payload for calling the AWS SSO APIs.
+
+        Returns:
+            deepcopy: Returns a deepcopy object of the payload
+
+        """
+        target = Sso._validate_target(target)
+        payload = {'contentString': json.dumps(content_string),
+                   'headers': {'Content-Type': content_type,
+                               'Content-Encoding': content_encoding,
+                               'X-Amz-Target': x_amz_target},
+                   'method': method,
+                   'operation': target,
+                   'params': params or {},
+                   'path': path,
+                   'region': region}
+        return copy.deepcopy(payload)
+
+    @staticmethod
+    def _validate_target(target):
+        if target not in SUPPORTED_TARGETS:
+            raise UnsupportedTarget(target)
+        return target
+
     def _get_authenticated_session(self):
         return self.aws_authenticator.get_sso_authenticated_session()
 
@@ -86,12 +120,12 @@ class Sso(LoggerMixin):
            str: The id of directory configured in SSO
 
         """
-        url = f'https://{self.aws_region}.console.aws.amazon.com/singlesignon/api/userpool'
-        payload = get_api_payload(content_string={},
-                                  target='GetUserPoolInfo',
-                                  path='/userpool/',
-                                  x_amz_target='com.amazonaws.swbup.service.SWBUPService.GetUserPoolInfo',
-                                  region=self.aws_region)
+        url = f'{self.api_url}/userpool'
+        payload = Sso.get_api_payload(content_string={},
+                                      target='GetUserPoolInfo',
+                                      path='/userpool/',
+                                      x_amz_target='com.amazonaws.swbup.service.SWBUPService.GetUserPoolInfo',
+                                      region=self.aws_region)
         self.logger.debug('Trying to get directory id for sso')
         response = self.session.post(url, json=payload)
         return response.json().get('DirectoryId')
@@ -146,14 +180,14 @@ class Sso(LoggerMixin):
             list: The list of groups configured in SSO
 
         """
-        payload = get_api_payload(content_string={},
-                                  target='ListPermissionSets',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.ListPermissionSets',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string={},
+                                      target='ListPermissionSets',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.ListPermissionSets',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to account details...')
-        response = self.session.post(self.url,
+        response = self.session.post(self.endpoint_url,
                                      json=payload)
         return [PermissionSet(self, data) for data in response.json().get('permissionSets')]
 
@@ -226,15 +260,15 @@ class Sso(LoggerMixin):
         method = 'ProvisionApplicationProfileForAWSAccountInstance'
         permission_set_id = self.get_permission_set_by_name(permission_set_name).id
         instance_id = self.get_account_by_name(account_name).instance_id
-        payload = get_api_payload(content_string={'permissionSetId': permission_set_id,
-                                                  'instanceId': instance_id},
-                                  target=method,
-                                  path='/control/',
-                                  x_amz_target=f'com.amazon.switchboard.service.SWBService.{method}',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string={'permissionSetId': permission_set_id,
+                                                      'instanceId': instance_id},
+                                      target=method,
+                                      path='/control/',
+                                      x_amz_target=f'com.amazon.switchboard.service.SWBService.{method}',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to provision application profile for aws account...')
-        response = self.session.post(self.url,
+        response = self.session.post(self.endpoint_url,
                                      json=payload)
         return response.json().get('applicationProfile', {}).get('profileId', '')
 
@@ -265,14 +299,14 @@ class Sso(LoggerMixin):
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = get_api_payload(content_string=content_string,
-                                  target='AssociateProfile',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='AssociateProfile',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to assign groups to aws account...')
-        response = self.session.post(self.url,
+        response = self.session.post(self.endpoint_url,
                                      json=payload)
         return response.ok
 
@@ -300,15 +334,15 @@ class Sso(LoggerMixin):
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = get_api_payload(content_string=content_string,
-                                  target='DisassociateProfile',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='DisassociateProfile',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to assign groups to aws account...')
 
-        response = self.session.post(self.url,
+        response = self.session.post(self.endpoint_url,
                                      json=payload)
         LOGGER.debug(response)
         return response.ok
@@ -342,14 +376,14 @@ class Sso(LoggerMixin):
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = get_api_payload(content_string=content_string,
-                                  target='AssociateProfile',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='AssociateProfile',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to assign groups to aws account...')
-        response = self.session.post(self.url,
+        response = self.session.post(self.endpoint_url,
                                      json=payload)
         return response.ok
 
@@ -383,15 +417,15 @@ class Sso(LoggerMixin):
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = get_api_payload(content_string=content_string,
-                                  target='DisassociateProfile',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='DisassociateProfile',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to assign groups to aws account...')
 
-        response = self.session.post(self.url,
+        response = self.session.post(self.endpoint_url,
                                      json=payload)
         self.logger.debug(response)
         return response.ok
@@ -424,12 +458,12 @@ class Sso(LoggerMixin):
             content_string = {"IdentityStoreId": self.sso_directory_id,
                               "MaxResults": 25,
                               "NextToken": next_token}
-        payload = get_api_payload(content_string=content_string,
-                                  target='SearchUsers',
-                                  path='/identitystore/',
-                                  x_amz_target='com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='SearchUsers',
+                                      path='/identitystore/',
+                                      x_amz_target='com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to list user details...')
         response = self.session.post('https://eu-west-1.console.aws.amazon.com/singlesignon/api/identitystore',
                                      json=payload)
@@ -449,12 +483,12 @@ class Sso(LoggerMixin):
                               "MaxResults": 100,
                               "NextToken": next_token
                               }
-        payload = get_api_payload(content_string=content_string,
-                                  target='SearchGroups',
-                                  path='/userpool/',
-                                  x_amz_target='com.amazonaws.swbup.service.SWBUPService.SearchGroups',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='SearchGroups',
+                                      path='/userpool/',
+                                      x_amz_target='com.amazonaws.swbup.service.SWBUPService.SearchGroups',
+                                      region=self.aws_region
+                                      )
         response = self.session.post(url,
                                      json=payload)
         return [Group(self, data) for data in response.json().get('Groups')], response.json().get('NextToken', '')
@@ -481,15 +515,15 @@ class Sso(LoggerMixin):
                           'relayState': relay_state,
                           'ttl': ttl
                           }
-        payload = get_api_payload(content_string=content_string,
-                                  target='CreatePermissionSet',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.CreatePermissionSet',
-                                  region=self.aws_region
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='CreatePermissionSet',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.CreatePermissionSet',
+                                      region=self.aws_region
+                                      )
         self.logger.debug('Trying to create Permission set...')
 
-        response = self.session.post(self.url,
+        response = self.session.post(self.endpoint_url,
                                      json=payload)
         self.logger.debug(response)
         return PermissionSet(self, response.json().get('permissionSet'))

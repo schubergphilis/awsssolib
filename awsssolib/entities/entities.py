@@ -33,7 +33,7 @@ Main code for entities.
 import logging
 import json
 
-from awsssolib.utils import get_api_payload
+from awsssolib.awsssolib import Sso
 from .core import Entity
 
 __author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>'''
@@ -97,12 +97,12 @@ class Group(Entity):
             str: The users part of the group
 
         """
-        payload = get_api_payload(content_string={'GroupId': self.id,
-                                                  'MaxResults': 100},
-                                  target='ListMembersInGroup',
-                                  path='/userpool/',
-                                  x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListMembersInGroup'
-                                  )
+        payload = Sso.get_api_payload(content_string={'GroupId': self.id,
+                                                      'MaxResults': 100},
+                                      target='ListMembersInGroup',
+                                      path='/userpool/',
+                                      x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListMembersInGroup'
+                                      )
         self._logger.debug('Trying to get users for the groups...')
         response = self._sso.session.post(self.url,
                                           json=payload)
@@ -176,11 +176,11 @@ class Account(Entity):
         """
         account_id = self.id
         target = 'com.amazon.switchboard.service.SWBService.GetApplicationInstanceForAWSAccount'
-        payload = get_api_payload(content_string={'awsAccountId': account_id},
-                                  target='GetApplicationInstanceForAWSAccount',
-                                  path='/control/',
-                                  x_amz_target=target
-                                  )
+        payload = Sso.get_api_payload(content_string={'awsAccountId': account_id},
+                                      target='GetApplicationInstanceForAWSAccount',
+                                      path='/control/',
+                                      x_amz_target=target
+                                      )
         self._logger.debug('Trying to get instance id for aws account...')
         response = self._sso.session.post(self.url,
                                           json=payload)
@@ -194,11 +194,11 @@ class Account(Entity):
             list: The list of associated profiles with the Account
 
         """
-        payload = get_api_payload(content_string={'instanceId': self.instance_id},
-                                  target='ListAWSAccountProfiles',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.ListAWSAccountProfiles',
-                                  )
+        payload = Sso.get_api_payload(content_string={'instanceId': self.instance_id},
+                                      target='ListAWSAccountProfiles',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.ListAWSAccountProfiles',
+                                      )
         self._logger.debug('Trying to provision application profile for aws account...')
         response = self._sso.session.post(self.url,
                                           json=payload)
@@ -310,12 +310,12 @@ class User(Entity):
             str: The groups associated with the user
 
         """
-        payload = get_api_payload(content_string={'UserId': self.id,
-                                                  'MaxResults': 100},
-                                  target='ListGroupsForUser',
-                                  path='/userpool/',
-                                  x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser'
-                                  )
+        payload = Sso.get_api_payload(content_string={'UserId': self.id,
+                                                      'MaxResults': 100},
+                                      target='ListGroupsForUser',
+                                      path='/userpool/',
+                                      x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser'
+                                      )
         self._logger.debug('Trying to get groups for the user...')
         response = self._sso.session.post(self.url,
                                           json=payload)
@@ -327,7 +327,7 @@ class PermissionSet(Entity):
 
     def __init__(self, sso_instance, data):
         Entity.__init__(self, sso_instance, data)
-        self.url = sso_instance.url
+        self.url = sso_instance.endpoint_url
 
     @property
     def description(self):
@@ -398,11 +398,11 @@ class PermissionSet(Entity):
 
         """
         content_string = {'permissionSetId': self.id}
-        payload = get_api_payload(content_string=content_string,
-                                  target='GetPermissionsPolicy',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.GetPermissionsPolicy'
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='GetPermissionsPolicy',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.GetPermissionsPolicy'
+                                      )
         response = self._sso.session.post(self.url,
                                           json=payload)
         return response.json()
@@ -433,11 +433,11 @@ class PermissionSet(Entity):
             content_string = {'permissionSetId': self.id,
                               'onlyOutOfSync': 'false',
                               'marker': marker}
-        payload = get_api_payload(content_string=content_string,
-                                  target='ListAccountsWithProvisionedPermissionSet',
-                                  path='/control/',
-                                  x_amz_target=target
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='ListAccountsWithProvisionedPermissionSet',
+                                      path='/control/',
+                                      x_amz_target=target
+                                      )
         self.logger.debug('Trying to list accounts details...')
         response = self._sso.session.post(self.url,
                                           json=payload)
@@ -458,11 +458,11 @@ class PermissionSet(Entity):
         content_string = {'permissionSetId': self.id,
                           'policyDocument': json.dumps(policy_document)
                           }
-        payload = get_api_payload(content_string=content_string,
-                                  target='PutPermissionsPolicy',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.PutPermissionsPolicy'
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='PutPermissionsPolicy',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.PutPermissionsPolicy'
+                                      )
         response = self._sso.session.post(self.url,
                                           json=payload)
         return response.ok
@@ -491,11 +491,11 @@ class PermissionSet(Entity):
                           'ttl': new_ttl,
                           'relayState': new_relay_state
                           }
-        payload = get_api_payload(content_string=content_string,
-                                  target='UpdatePermissionSet',
-                                  path='/control/',
-                                  x_amz_target='com.amazon.switchboard.service.SWBService.UpdatePermissionSet'
-                                  )
+        payload = Sso.get_api_payload(content_string=content_string,
+                                      target='UpdatePermissionSet',
+                                      path='/control/',
+                                      x_amz_target='com.amazon.switchboard.service.SWBService.UpdatePermissionSet'
+                                      )
         response = self._sso.session.post(self.url,
                                           json=payload)
         return response.ok
