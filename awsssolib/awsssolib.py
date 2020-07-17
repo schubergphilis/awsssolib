@@ -33,7 +33,7 @@ Main code for awsssolib.
 
 import logging
 import json
-from awsauthenticatorlib.awsauthenticatorlib import AwsAuthenticator
+from awsauthenticatorlib import AwsAuthenticator, LoggerMixin
 from awsssolib.configuration import RELAY_STATE
 from .utils import get_api_payload
 from .entities import (Group,
@@ -45,7 +45,7 @@ __author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''18-05-2020'''
 __copyright__ = '''Copyright 2020, Sayantan Khanra'''
-__credits__ = ["Sayantan Khanra"]
+__credits__ = ["Sayantan Khanra", "Costas Tyfoxylos"]
 __license__ = '''MIT'''
 __maintainer__ = '''Sayantan Khanra'''
 __email__ = '''<skhanra@schubergphilis.com>'''
@@ -57,18 +57,7 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class LoggerMixin:  # pylint: disable=too-few-public-methods
-    """Logger."""
 
-    @property
-    def logger(self):
-        """Exposes the logger to be used by objects using the Mixin.
-
-        Returns:
-            logger (logger): The properly named logger.
-
-        """
-        return logging.getLogger(f'{LOGGER_BASENAME}.{self.__class__.__name__}')
 
 
 class Sso(LoggerMixin):
