@@ -48,9 +48,3 @@ SUPPORTED_TARGETS = ['GetUserPoolInfo',
                      'GetPermissionsPolicy',
                      'ListAccountsWithProvisionedPermissionSet',
                      'UpdatePermissionSet']
-
-DEFAULT_AWS_REGION = 'eu-west-1'
-API_CONTENT_TYPE = 'application/json; charset=UTF-8'
-API_CONTENT_ENCODING = 'amz-1.0'
-
-RELAY_STATE = f'https://{DEFAULT_AWS_REGION}.console.aws.amazon.com/console/home?region={DEFAULT_AWS_REGION}#'

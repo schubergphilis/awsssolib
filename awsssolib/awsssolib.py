@@ -56,8 +56,12 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
+
 class Sso(LoggerMixin):
     """Models AWS SSO."""
+    API_CONTENT_TYPE = 'application/json; charset=UTF-8'
+    API_CONTENT_ENCODING = 'amz-1.0'
+    DEFAULT_AWS_REGION = 'eu-west-1'
 
     def __init__(self, arn):
         self.aws_authenticator = AwsAuthenticator(arn)
@@ -65,6 +69,10 @@ class Sso(LoggerMixin):
         self.api_url = f'{self._urls.regional_single_sign_on}/api'
         self.endpoint_url = f'{self.api_url}/peregrine'
         self.session = self._get_authenticated_session()
+
+    @property
+    def relay_state(self):
+        return f'{self._urls.regional_console}home?region={self.aws_region}#'
 
     @property
     def aws_region(self):
@@ -81,10 +89,10 @@ class Sso(LoggerMixin):
                         target, method='POST',
                         params=None,
                         path='/',
-                        content_type=API_CONTENT_TYPE,
-                        content_encoding=API_CONTENT_ENCODING,
+                        content_type=Sso.API_CONTENT_TYPE,
+                        content_encoding=Sso.API_CONTENT_ENCODING,
                         x_amz_target='',
-                        region=DEFAULT_AWS_REGION):
+                        region=Sso.DEFAULT_AWS_REGION):
         """Generates the payload for calling the AWS SSO APIs.
 
         Returns:
@@ -120,14 +128,13 @@ class Sso(LoggerMixin):
            str: The id of directory configured in SSO
 
         """
-        url = f'{self.api_url}/userpool'
         payload = Sso.get_api_payload(content_string={},
                                       target='GetUserPoolInfo',
                                       path='/userpool/',
                                       x_amz_target='com.amazonaws.swbup.service.SWBUPService.GetUserPoolInfo',
                                       region=self.aws_region)
         self.logger.debug('Trying to get directory id for sso')
-        response = self.session.post(url, json=payload)
+        response = self.session.post(f'{self.api_url}/userpool', json=payload)
         return response.json().get('DirectoryId')
 
     @property
@@ -496,7 +503,7 @@ class Sso(LoggerMixin):
     def create_permission_set(self,
                               name,
                               description=' ',
-                              relay_state=RELAY_STATE,
+                              relay_state=self.relay_state,
                               ttl='PT2H'):
         """Create a permission_set with a aws defined policy or custom policy.
 
