@@ -57,17 +57,23 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-
-
-
 class Sso(LoggerMixin):
     """Models AWS SSO."""
 
     def __init__(self, arn):
         self.aws_authenticator = AwsAuthenticator(arn)
-        self.aws_region = self.aws_authenticator.region
         self.url = f'https://{self.aws_region}.console.aws.amazon.com/singlesignon/api/peregrine'
         self.session = self._get_authenticated_session()
+
+    @property
+    def aws_region(self):
+        """Aws Console Region.
+
+        Returns:
+            region (str): The region of the console.
+
+        """
+        return self.aws_authenticator.region
 
     def _get_authenticated_session(self):
         return self.aws_authenticator.get_sso_authenticated_session()
@@ -285,7 +291,8 @@ class Sso(LoggerMixin):
         group_id = self.get_group_by_name(group_name).id
         instance_id = self.get_account_by_name(account_name).instance_id
         directory_id = self.sso_directory_id
-        profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get('profileId')
+        profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get(
+            'profileId')
         content_string = {'accessorId': group_id,
                           'accessorType': 'GROUP',
                           'accessorDisplay': {"groupName": group_name},
@@ -364,7 +371,8 @@ class Sso(LoggerMixin):
         user_last_name = user.last_name
         instance_id = self.get_account_by_name(account_name).instance_id
         directory_id = self.sso_directory_id
-        profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get('profileId')
+        profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get(
+            'profileId')
         content_string = {'accessorId': user_id,
                           'accessorType': 'USER',
                           'accessorDisplay': {"userName": user_name,
