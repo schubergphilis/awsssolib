@@ -1,0 +1,33 @@
+stages:
+  - lint
+  - test
+  - build
+  - upload
+
+lint:
+  tags: [elastic]
+  stage: lint
+  image: enexis-docker-local.jfrog.io/python3_ci:0.4.1
+  script: _CI/scripts/lint.py
+
+test:
+  tags: [elastic]
+  stage: test
+  image: enexis-docker-local.jfrog.io/python3_ci:0.4.1
+  script: _CI/scripts/test.py
+
+build:
+  tags: [elastic]
+  stage: build
+  image: enexis-docker-local.jfrog.io/python3_ci:0.4.1
+  script: _CI/scripts/build.py
+
+upload:
+  tags: [elastic]
+  stage: upload
+  image: enexis-docker-local.jfrog.io/python3_ci:0.4.1
+  only:
+    - tags
+  except:
+    - branches
+  script: _CI/scripts/upload.py
