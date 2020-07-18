@@ -31,10 +31,12 @@ Main code for awsssolib.
 
 """
 
+import copy
 import logging
 import json
 from awsauthenticatorlib import AwsAuthenticator, LoggerMixin, Urls
-from awsssolib.configuration import SUPPORTED_TARGETS, RELAY_STATE
+from awsssolib.configuration import SUPPORTED_TARGETS
+from awsssolib.awsssolibexceptions import UnsupportedTarget
 from .entities import (Group,
                        User,
                        Account,
@@ -135,7 +137,7 @@ class Sso(LoggerMixin):
                                       region=self.aws_region)
         self.logger.debug('Trying to get directory id for sso')
         response = self.session.post(f'{self.api_url}/userpool', json=payload)
-        if not responce.ok:
+        if not response.ok:
             self.logger.error(f'Error! Received :{response.text}')
             return None
         return response.json().get('DirectoryId')
