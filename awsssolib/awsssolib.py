@@ -320,6 +320,8 @@ class Sso(LoggerMixin):
         self.logger.debug('Trying to assign groups to aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
+        if not response.ok:
+            self.logger.error(f'Error! Received :{response.text}')
         return response.ok
 
     def disassociate_group_from_account(self, group_name, account_name, permission_set_name):
@@ -356,6 +358,8 @@ class Sso(LoggerMixin):
 
         response = self.session.post(self.endpoint_url,
                                      json=payload)
+        if not response.ok:
+            self.logger.error(f'Error! Received :{response.text}')
         LOGGER.debug(response)
         return response.ok
 
@@ -439,6 +443,8 @@ class Sso(LoggerMixin):
 
         response = self.session.post(self.endpoint_url,
                                      json=payload)
+        if not response.ok:
+            self.logger.error(f'Error! Received :{response.text}')
         self.logger.debug(response)
         return response.ok
 
@@ -455,7 +461,7 @@ class Sso(LoggerMixin):
                    'path': '/',
                    'region': 'us-east-1'}
         self.logger.debug('Trying to list account details...')
-        response = self.session.post('https://eu-west-1.console.aws.amazon.com/singlesignon/api/organizations',
+        response = self.session.post(f'https://{self.aws_region}.console.aws.amazon.com/singlesignon/api/organizations',
                                      json=payload)
         return [Account(self, data) for data in response.json().get('Accounts')], response.json().get('NextToken', '')
 
@@ -471,13 +477,13 @@ class Sso(LoggerMixin):
                                       region=self.aws_region
                                       )
         self.logger.debug('Trying to list user details...')
-        response = self.session.post('https://eu-west-1.console.aws.amazon.com/singlesignon/api/identitystore',
+        response = self.session.post(f'https://{self.aws_region}.console.aws.amazon.com/singlesignon/api/identitystore',
                                      json=payload)
         return [User(self, data) for data in response.json().get('Users')], response.json().get('NextToken', '')
 
     def _list_groups_pagination(self, next_token=None):
 
-        url = 'https://eu-west-1.console.aws.amazon.com/singlesignon/api/userpool'
+        url = f'https://{self.aws_region}.console.aws.amazon.com/singlesignon/api/userpool'
         self.logger.debug('Trying to get group list in sso')
         content_string = {"SearchString": "*",
                           "SearchAttributes": ["GroupName"],
