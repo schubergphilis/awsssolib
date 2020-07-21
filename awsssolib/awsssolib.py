@@ -91,7 +91,8 @@ class Sso(LoggerMixin):
 
     @staticmethod
     def get_api_payload(content_string,  # pylint: disable=too-many-arguments
-                        target, method='POST',
+                        target,
+                        method='POST',
                         params=None,
                         path='/',
                         content_type=Sso.API_CONTENT_TYPE,
@@ -167,11 +168,19 @@ class Sso(LoggerMixin):
             list: The list of groups configured in SSO
 
         """
-        users, next_token = self._list_users_pagination()
-        while next_token:
-            user_list, next_token = self._list_users_pagination(next_token=next_token)
-            users = users + user_list
-        return users
+        content_payload = {"IdentityStoreId": self.sso_directory_id,
+                           "MaxResults": 25}
+        path = 'identitystore'
+        target = 'SearchUsers'
+        amz_target = 'com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers'
+        region = self.aws_region
+        return self._get_paginated_results(content_payload,
+                                           path,
+                                           target,
+                                           amz_target,
+                                           region,
+                                           object_type=User,
+                                           object_group='Users')
 
     @property
     def groups(self):
@@ -181,11 +190,20 @@ class Sso(LoggerMixin):
             list: The list of groups configured in SSO
 
         """
-        groups, next_token = self._list_groups_pagination()
-        while next_token:
-            group_list, next_token = self._list_groups_pagination(next_token=next_token)
-            groups = groups + group_list
-        return groups
+        content_payload = {"SearchString": "*",
+                           "SearchAttributes": ["GroupName"],
+                           "MaxResults": 100}
+        path = 'userpool'
+        target = 'SearchGroups'
+        amz_target = 'com.amazonaws.swbup.service.SWBUPService.SearchGroups'
+        region = self.aws_region
+        return self._get_paginated_results(content_payload,
+                                           path,
+                                           target,
+                                           amz_target,
+                                           region,
+                                           object_type=Group,
+                                           object_group='Groups')
 
     @property
     def permission_sets(self):
@@ -458,44 +476,72 @@ class Sso(LoggerMixin):
                    'path': '/',
                    'region': 'us-east-1'}
         self.logger.debug('Trying to list account details...')
-        response = self.session.post('https://eu-west-1.console.aws.amazon.com/singlesignon/api/organizations',
+        response = self.session.post(f'{self.api_url}/organizations',
                                      json=payload)
         return [Account(self, data) for data in response.json().get('Accounts')], response.json().get('NextToken', '')
 
-    def _list_users_pagination(self, next_token=None):
-        content_string = {"IdentityStoreId": self.sso_directory_id,
-                          "MaxResults": 25}
-        if next_token:
-            content_string.update({'NextToken': next_token})
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='SearchUsers',
-                                      path='/identitystore/',
-                                      x_amz_target='com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers',
-                                      region=self.aws_region
-                                      )
-        self.logger.debug('Trying to list user details...')
-        response = self.session.post('https://eu-west-1.console.aws.amazon.com/singlesignon/api/identitystore',
-                                     json=payload)
-        return [User(self, data) for data in response.json().get('Users')], response.json().get('NextToken', '')
+    # def _list_users_pagination(self, next_token=None):
+    #     content_string = {"IdentityStoreId": self.sso_directory_id,
+    #                       "MaxResults": 25}
+    #     if next_token:
+    #         content_string.update({'NextToken': next_token})
+    #     path = 'identitystore'
+    #     payload = Sso.get_api_payload(content_string=content_string,
+    #                                   target='SearchUsers',
+    #                                   path=f'/{path}/',
+    #                                   x_amz_target='com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers',
+    #                                   region=self.aws_region
+    #                                   )
+    #     self.logger.debug('Trying to list user details...')
+    #     response = self.session.post(f'{self.api_url}/{path}',
+    #                                  json=payload)
+    #     return [User(self, data) for data in response.json().get('Users')], response.json().get('NextToken', '')
 
-    def _list_groups_pagination(self, next_token=None):
+    # def _list_groups_pagination(self, next_token=None):
+    #     self.logger.debug('Trying to get group list in sso')
+    #
+    #     if next_token:
+    #         content_string.update({'NextToken': next_token})
+    #
+    #     payload = Sso.get_api_payload(content_string=content_string,
+    #                                   target='SearchGroups',
+    #                                   path=f'/{path}/',
+    #                                   x_amz_target='com.amazonaws.swbup.service.SWBUPService.SearchGroups',
+    #                                   region=self.aws_region
+    #                                   )
+    #     response = self.session.post(f'{self.api_url}/{path}',
+    #                                  json=payload)
+    #     return [Group(self, data) for data in response.json().get('Groups')], response.json().get('NextToken', '')
 
-        url = 'https://eu-west-1.console.aws.amazon.com/singlesignon/api/userpool'
-        self.logger.debug('Trying to get group list in sso')
-        content_string = {"SearchString": "*",
-                          "SearchAttributes": ["GroupName"],
-                          "MaxResults": 100}
-        if next_token:
-            content_string.update({'NextToken': next_token})
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='SearchGroups',
-                                      path='/userpool/',
-                                      x_amz_target='com.amazonaws.swbup.service.SWBUPService.SearchGroups',
-                                      region=self.aws_region
-                                      )
-        response = self.session.post(url,
-                                     json=payload)
-        return [Group(self, data) for data in response.json().get('Groups')], response.json().get('NextToken', '')
+    def _get_paginated_results(self,
+                               content_payload,
+                               path,
+                               target,
+                               amz_target,
+                               region,
+                               object_type,
+                               object_group):
+        payload = Sso.get_api_payload(content_string=content_payload,
+                                      target=target,
+                                      path=f'/{path}/',
+                                      x_amz_target=amz_target,
+                                      region=region)
+        url = f'{self.api_url}/{path}'
+        response, next_token = self._get_partial_response(url, payload)
+        for data in response.json().get(object_group, []):
+            yield object_type(self, data)
+        while next_token:
+            payload.update({'NextToken': next_token})
+            response, next_token = self._get_partial_response(url, payload)
+            for data in response.json().get(object_group, []):
+                yield object_type(self, data)
+
+    def _get_partial_response(self, url, payload):
+        response = self.session.post(url, json=payload)
+        if not response.ok:
+            raise SystemError(response.text)
+        next_token = response.json().get('NextToken')
+        return response, next_token
 
     def create_permission_set(self,
                               name,
