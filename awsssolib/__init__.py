@@ -31,8 +31,8 @@ Import all parts from awsssolib here
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
 """
-from ._version import __version__
 from awsssolib.awsssolib import Sso
+from ._version import __version__
 
 __author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''

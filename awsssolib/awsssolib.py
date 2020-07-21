@@ -58,8 +58,9 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class Sso(LoggerMixin):
+class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
     """Models AWS SSO."""
+
     API_CONTENT_TYPE = 'application/json; charset=UTF-8'
     API_CONTENT_ENCODING = 'amz-1.0'
     DEFAULT_AWS_REGION = 'eu-west-1'
@@ -72,14 +73,32 @@ class Sso(LoggerMixin):
 
     @property
     def relay_state(self):
+        """The relay state of the SSO.
+
+        Returns:
+            relay_state (str): The relay state of sso.
+
+        """
         return f'{self._urls.regional_console}home?region={self.aws_region}#'
 
     @property
     def api_url(self):
+        """The url of the api for sso.
+
+        Returns:
+            api_url (str): The url of the api for sso.
+
+        """
         return f'{self._urls.regional_single_sign_on}/api'
 
     @property
     def endpoint_url(self):
+        """The url of the api endpoint for sso.
+
+        Returns:
+            endpoint_url (str): The url of the api endpoint for sso.
+
+        """
         return f'{self.api_url}/peregrine'
 
     @property
@@ -344,7 +363,7 @@ class Sso(LoggerMixin):
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
-            self.logger.error(f'Received :{response.text}')
+            self.logger.error('Received :%s', response.text)
         return response.ok
 
     def disassociate_group_from_account(self, group_name, account_name, permission_set_name):
@@ -382,7 +401,7 @@ class Sso(LoggerMixin):
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
-            self.logger.error(f'Received :{response.text}')
+            self.logger.error('Received :%s', response.text)
         return response.ok
 
     def associate_user_to_account(self, user_name, account_name, permission_set_name):
@@ -424,7 +443,7 @@ class Sso(LoggerMixin):
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
-            self.logger.error(f'Received :{response.text}')
+            self.logger.error('Received :%s', response.text)
         return response.ok
 
     def disassociate_user_from_account(self, user_name, account_name, permission_set_name):
@@ -468,10 +487,10 @@ class Sso(LoggerMixin):
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
-            self.logger.error(f'Received :{response.text}')
+            self.logger.error('Received :%s', response.text)
         return response.ok
 
-    def _get_paginated_results(self,
+    def _get_paginated_results(self,  # pylint: disable=too-many-arguments
                                content_payload,
                                path,
                                target,
@@ -525,16 +544,14 @@ class Sso(LoggerMixin):
         content_string = {'permissionSetName': name,
                           'description': description,
                           'relayState': relay_state or self.relay_state,
-                          'ttl': ttl
-                          }
+                          'ttl': ttl}
         payload = self.get_api_payload(content_string=content_string,
                                        target='CreatePermissionSet',
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.CreatePermissionSet',
                                        region=self.aws_region)
         self.logger.debug('Trying to create Permission set...')
-        response = self.session.post(self.endpoint_url,
-                                     json=payload)
+        response = self.session.post(self.endpoint_url, json=payload)
         self.logger.debug(response)
         if response.ok:
             return PermissionSet(self, response.json().get('permissionSet'))

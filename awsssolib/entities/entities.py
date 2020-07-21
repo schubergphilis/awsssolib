@@ -212,11 +212,11 @@ class Account(Entity):
             list: The list of associated profiles with the Account
 
         """
+        target = 'com.amazon.switchboard.service.SWBService.ListAWSAccountProfiles'
         payload = self._sso.get_api_payload(content_string={'instanceId': self.instance_id},
                                             target='ListAWSAccountProfiles',
                                             path='/control/',
-                                            x_amz_target='com.amazon.switchboard.service.SWBService.ListAWSAccountProfiles',
-                                            )
+                                            x_amz_target=target)
         self.logger.debug('Trying to provision application profile for aws account...')
         response = self._sso.session.post(self.url,
                                           json=payload)
@@ -339,8 +339,7 @@ class User(Entity):
                                                             'MaxResults': 100},
                                             target='ListGroupsForUser',
                                             path='/userpool/',
-                                            x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser'
-                                            )
+                                            x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser')
         self.logger.debug('Trying to get groups for the user...')
         response = self._sso.session.post(self.url,
                                           json=payload)
@@ -425,12 +424,12 @@ class PermissionSet(Entity):
             string: The relayState of the permission_set
 
         """
+        target = 'com.amazon.switchboard.service.SWBService.GetPermissionsPolicy'
         content_string = {'permissionSetId': self.id}
         payload = self._sso.get_api_payload(content_string=content_string,
                                             target='GetPermissionsPolicy',
                                             path='/control/',
-                                            x_amz_target='com.amazon.switchboard.service.SWBService.GetPermissionsPolicy'
-                                            )
+                                            x_amz_target=target)
         response = self._sso.session.post(self.url,
                                           json=payload)
         if not response.ok:
