@@ -34,7 +34,7 @@ Main code for awsssolib.
 import copy
 import logging
 import json
-from awsauthenticatorlib import AwsAuthenticator, LoggerMixin, Urls
+from awsauthenticationlib import AwsAuthenticator, LoggerMixin, Urls
 from awsssolib.configuration import SUPPORTED_TARGETS
 from awsssolib.awsssolibexceptions import UnsupportedTarget
 from .entities import (Group,
@@ -68,6 +68,7 @@ class Sso(LoggerMixin):
         self.aws_authenticator = AwsAuthenticator(arn)
         self._urls = Urls(self.aws_region)
         self.session = self._get_authenticated_session()
+        self._directory_id = None
 
     @property
     def relay_state(self):
@@ -97,10 +98,10 @@ class Sso(LoggerMixin):
                         method='POST',
                         params=None,
                         path='/',
-                        content_type=Sso.API_CONTENT_TYPE,
-                        content_encoding=Sso.API_CONTENT_ENCODING,
+                        content_type=None,
+                        content_encoding=None,
                         x_amz_target='',
-                        region=Sso.DEFAULT_AWS_REGION):
+                        region=None):
         """Generates the payload for calling the AWS SSO APIs.
 
         Returns:
@@ -109,14 +110,14 @@ class Sso(LoggerMixin):
         """
         target = Sso._validate_target(target)
         payload = {'contentString': json.dumps(content_string),
-                   'headers': {'Content-Type': content_type,
-                               'Content-Encoding': content_encoding,
+                   'headers': {'Content-Type': content_type or Sso.API_CONTENT_TYPE,
+                               'Content-Encoding': content_encoding or Sso.API_CONTENT_ENCODING,
                                'X-Amz-Target': x_amz_target},
                    'method': method,
                    'operation': target,
                    'params': params or {},
                    'path': path,
-                   'region': region}
+                   'region': region or Sso.DEFAULT_AWS_REGION}
         return copy.deepcopy(payload)
 
     @staticmethod
@@ -129,24 +130,25 @@ class Sso(LoggerMixin):
         return self.aws_authenticator.get_sso_authenticated_session()
 
     @property
-    def sso_directory_id(self):
+    def directory_id(self):
         """The external/internal directory id configured with aws sso.
 
         Returns:
            str: The id of directory configured in SSO
 
         """
-        payload = Sso.get_api_payload(content_string={},
-                                      target='GetUserPoolInfo',
-                                      path='/userpool/',
-                                      x_amz_target='com.amazonaws.swbup.service.SWBUPService.GetUserPoolInfo',
-                                      region=self.aws_region)
-        self.logger.debug('Trying to get directory id for sso')
-        response = self.session.post(f'{self.api_url}/userpool', json=payload)
-        if not response.ok:
-            self.logger.error(f'Error! Received :{response.text}')
-            return None
-        return response.json().get('DirectoryId')
+        if self._directory_id is None:
+            payload = self.get_api_payload(content_string={},
+                                           target='GetUserPoolInfo',
+                                           path='/userpool/',
+                                           x_amz_target='com.amazonaws.swbup.service.SWBUPService.GetUserPoolInfo',
+                                           region=self.aws_region)
+            self.logger.debug('Trying to get directory id for sso')
+            response = self.session.post(f'{self.api_url}/userpool', json=payload)
+            if not response.ok:
+                raise ValueError(response.text)
+            self._directory_id = response.json().get('DirectoryId')
+        return self._directory_id
 
     @property
     def accounts(self):
@@ -167,20 +169,16 @@ class Sso(LoggerMixin):
         """The users configured in SSO.
 
         Returns:
-            list: The list of groups configured in SSO
+            users (generator): The users configured in SSO
 
         """
-        content_payload = {"IdentityStoreId": self.sso_directory_id,
-                           "MaxResults": 25}
-        path = 'identitystore'
-        target = 'SearchUsers'
-        amz_target = 'com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers'
-        region = self.aws_region
+        content_payload = {'IdentityStoreId': self.directory_id,
+                           'MaxResults': 50}
         return self._get_paginated_results(content_payload,
-                                           path,
-                                           target,
-                                           amz_target,
-                                           region,
+                                           path='identitystore',
+                                           target='SearchUsers',
+                                           amz_target='com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers',
+                                           region=self.aws_region,
                                            object_type=User,
                                            object_group='Users')
 
@@ -189,21 +187,17 @@ class Sso(LoggerMixin):
         """The groups configured in SSO.
 
         Returns:
-            list: The list of groups configured in SSO
+            groups (generator): The groups configured in SSO
 
         """
-        content_payload = {"SearchString": "*",
-                           "SearchAttributes": ["GroupName"],
-                           "MaxResults": 100}
-        path = 'userpool'
-        target = 'SearchGroups'
-        amz_target = 'com.amazonaws.swbup.service.SWBUPService.SearchGroups'
-        region = self.aws_region
+        content_payload = {'SearchString': '*',
+                           'SearchAttributes': ['GroupName'],
+                           'MaxResults': 100}
         return self._get_paginated_results(content_payload,
-                                           path,
-                                           target,
-                                           amz_target,
-                                           region,
+                                           path='userpool',
+                                           target='SearchGroups',
+                                           amz_target='com.amazonaws.swbup.service.SWBUPService.SearchGroups',
+                                           region=self.aws_region,
                                            object_type=Group,
                                            object_group='Groups')
 
@@ -326,7 +320,7 @@ class Sso(LoggerMixin):
         group_id = self.get_group_by_name(group_name).id
         instance_id = self.get_account_by_name(account_name).instance_id
         profile_id = self._provision_application_profile_for_aws_account_instance(permission_set_name, account_name)
-        directory_id = self.sso_directory_id
+        directory_id = self.directory_id
         content_string = {'accessorId': group_id,
                           'accessorType': 'GROUP',
                           'accessorDisplay': {"groupName": group_name},
@@ -359,7 +353,7 @@ class Sso(LoggerMixin):
         """
         group_id = self.get_group_by_name(group_name).id
         instance_id = self.get_account_by_name(account_name).instance_id
-        directory_id = self.sso_directory_id
+        directory_id = self.directory_id
         profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get(
             'profileId')
         content_string = {'accessorId': group_id,
@@ -402,7 +396,7 @@ class Sso(LoggerMixin):
         user_last_name = user.last_name
         instance_id = self.get_account_by_name(account_name).instance_id
         profile_id = self._provision_application_profile_for_aws_account_instance(permission_set_name, account_name)
-        directory_id = self.sso_directory_id
+        directory_id = self.directory_id
         content_string = {'accessorId': user_id,
                           'accessorType': 'USER',
                           'accessorDisplay': {"userName": user_name,
@@ -441,7 +435,7 @@ class Sso(LoggerMixin):
         user_first_name = user.first_name
         user_last_name = user.last_name
         instance_id = self.get_account_by_name(account_name).instance_id
-        directory_id = self.sso_directory_id
+        directory_id = self.directory_id
         profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get(
             'profileId')
         content_string = {'accessorId': user_id,
@@ -527,11 +521,11 @@ class Sso(LoggerMixin):
                                region,
                                object_type,
                                object_group):
-        payload = Sso.get_api_payload(content_string=content_payload,
-                                      target=target,
-                                      path=f'/{path}/',
-                                      x_amz_target=amz_target,
-                                      region=region)
+        payload = self.get_api_payload(content_string=content_payload,
+                                       target=target,
+                                       path=f'/{path}/',
+                                       x_amz_target=amz_target,
+                                       region=region)
         url = f'{self.api_url}/{path}'
         response, next_token = self._get_partial_response(url, payload)
         for data in response.json().get(object_group, []):
@@ -552,7 +546,7 @@ class Sso(LoggerMixin):
     def create_permission_set(self,
                               name,
                               description=' ',
-                              relay_state=self.relay_state,
+                              relay_state=None,
                               ttl='PT2H'):
         """Create a permission_set with a aws defined policy or custom policy.
 
@@ -568,7 +562,7 @@ class Sso(LoggerMixin):
         """
         content_string = {'permissionSetName': name,
                           'description': description,
-                          'relayState': relay_state,
+                          'relayState': relay_state or self.relay_state,
                           'ttl': ttl
                           }
         payload = Sso.get_api_payload(content_string=content_string,
