@@ -33,13 +33,14 @@ Manages the version of the package.
 
 import os
 
-__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>'''
+__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''18-05-2020'''
-__copyright__ = '''Copyright 2020, Sayantan Khanra'''
+__copyright__ = '''Copyright 2020, Sayantan Khanra, Costas Tyfoxylos'''
+__credits__ = ["Sayantan Khanra", "Costas Tyfoxylos"]
 __license__ = '''MIT'''
-__maintainer__ = '''Sayantan Khanra'''
-__email__ = '''<skhanra@schubergphilis.com>'''
+__maintainer__ = '''Sayantan Khanra, Costas Tyfoxylos'''
+__email__ = '''<skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 VERSION_FILE_PATH = os.path.abspath(

@@ -33,13 +33,14 @@ Import all parts from entities here
 """
 from .entities import Account, Group, User, PermissionSet
 
-__author__ = '''Sayantan Khanra <sKhanra@schubergphilis.com>'''
+__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
-__date__ = '''2018-01-08'''
-__copyright__ = '''Copyright 2018, Sayantan Khanra'''
+__date__ = '''18-05-2020'''
+__copyright__ = '''Copyright 2020, Sayantan Khanra, Costas Tyfoxylos'''
+__credits__ = ["Sayantan Khanra", "Costas Tyfoxylos"]
 __license__ = '''MIT'''
-__maintainer__ = '''Sayantan Khanra'''
-__email__ = '''<cKhanra@schubergphilis.com>'''
+__maintainer__ = '''Sayantan Khanra, Costas Tyfoxylos'''
+__email__ = '''<skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 assert Group

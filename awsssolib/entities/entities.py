@@ -35,14 +35,14 @@ import json
 
 from awsauthenticationlib import LoggerMixin
 
-__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>'''
+__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
-__date__ = '''2020-05-24'''
-__copyright__ = '''Copyright 2020, Sayantan Khanra'''
-__credits__ = ["Sayantan Khanra"]
+__date__ = '''18-05-2020'''
+__copyright__ = '''Copyright 2020, Sayantan Khanra, Costas Tyfoxylos'''
+__credits__ = ["Sayantan Khanra", "Costas Tyfoxylos"]
 __license__ = '''MIT'''
-__maintainer__ = '''Sayantan Khanra'''
-__email__ = '''<sKhanra@schubergphilis.com>'''
+__maintainer__ = '''Sayantan Khanra, Costas Tyfoxylos'''
+__email__ = '''<skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 # This is the main prefix used for logging
@@ -52,7 +52,7 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 class Entity(LoggerMixin):  # pylint: disable=too-few-public-methods
-    """The core object of okta."""
+    """The core entity."""
 
     def __init__(self, sso_instance, data):
         self._sso = sso_instance
@@ -74,10 +74,10 @@ class Group(Entity):
 
     @property
     def id(self):  # pylint: disable=invalid-name
-        """The type of the group.
+        """The id of the group.
 
         Returns:
-            string: The name of the type of the group
+            id (str) : The id of the group
 
         """
         return self._data.get('GroupId')
@@ -119,6 +119,9 @@ class Group(Entity):
         self.logger.debug('Trying to get users for the groups...')
         response = self._sso.session.post(self.url,
                                           json=payload)
+        if not response.ok:
+            self.logger.error(response.text)
+            return []
         return response.json().get('Members', [])
 
 
@@ -128,6 +131,7 @@ class Account(Entity):
     def __init__(self, sso_instance, data):
         super().__init__(sso_instance, data)
         self.url = sso_instance.endpoint_url
+        self._instance_id = None
 
     @property
     def name(self):
@@ -187,17 +191,18 @@ class Account(Entity):
             str: The instance_id of the account
 
         """
-        account_id = self.id
-        target = 'com.amazon.switchboard.service.SWBService.GetApplicationInstanceForAWSAccount'
-        payload = self._sso.get_api_payload(content_string={'awsAccountId': account_id},
-                                      target='GetApplicationInstanceForAWSAccount',
-                                      path='/control/',
-                                      x_amz_target=target
-                                      )
-        self.logger.debug('Trying to get instance id for aws account...')
-        response = self._sso.session.post(self.url,
-                                          json=payload)
-        return response.json().get('applicationInstance', {}).get('instanceId', '')
+        if self._instance_id is None:
+            account_id = self.id
+            target = 'com.amazon.switchboard.service.SWBService.GetApplicationInstanceForAWSAccount'
+            payload = self._sso.get_api_payload(content_string={'awsAccountId': account_id},
+                                                target='GetApplicationInstanceForAWSAccount',
+                                                path='/control/',
+                                                x_amz_target=target)
+            self.logger.debug('Trying to get instance id for aws account...')
+            response = self._sso.session.post(self.url,
+                                              json=payload)
+            self._instance_id = response.json().get('applicationInstance', {}).get('instanceId', '')
+        return self._instance_id
 
     @property
     def associated_profiles(self):
@@ -208,14 +213,17 @@ class Account(Entity):
 
         """
         payload = self._sso.get_api_payload(content_string={'instanceId': self.instance_id},
-                                      target='ListAWSAccountProfiles',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.ListAWSAccountProfiles',
-                                      )
+                                            target='ListAWSAccountProfiles',
+                                            path='/control/',
+                                            x_amz_target='com.amazon.switchboard.service.SWBService.ListAWSAccountProfiles',
+                                            )
         self.logger.debug('Trying to provision application profile for aws account...')
         response = self._sso.session.post(self.url,
                                           json=payload)
-        return response.json().get('profileList', {})
+        if not response.ok:
+            self.logger.error(response.text)
+            return []
+        return response.json().get('profileList', [])
 
 
 class User(Entity):
@@ -263,7 +271,11 @@ class User(Entity):
             datetime: The datetime object of when the user last changed password
 
         """
-        return self._data.get('UserAttributes').get('emails', {}).get('ComplexListValue')
+        return self._data.get('UserAttributes').get('emails', {}).get('ComplexListValue', '')
+
+    @property
+    def _name(self):
+        return self._data.get('UserAttributes').get('name', {}).get('ComplexValue', {})
 
     @property
     def first_name(self):
@@ -273,7 +285,7 @@ class User(Entity):
             string: The first name of the user
 
         """
-        return self._data.get('UserAttributes').get('name').get('ComplexValue').get('givenName').get('StringValue')
+        return self._name.get('givenName', {}).get('StringValue', '')
 
     @property
     def last_name(self):
@@ -283,7 +295,7 @@ class User(Entity):
             string: The last name of the user
 
         """
-        return self._data.get('UserAttributes').get('name').get('ComplexValue').get('familyName').get('StringValue')
+        return self._name.get('familyName', {}).get('StringValue', '')
 
     @property
     def id(self):  # pylint: disable=invalid-name
@@ -313,7 +325,7 @@ class User(Entity):
             str: The display name of the user
 
         """
-        return self._data.get('UserAttributes').get('displayName', {}).get('StringValue')
+        return self._data.get('UserAttributes', {}).get('displayName', {}).get('StringValue')
 
     @property
     def groups(self):
@@ -324,14 +336,17 @@ class User(Entity):
 
         """
         payload = self._sso.get_api_payload(content_string={'UserId': self.id,
-                                                      'MaxResults': 100},
-                                      target='ListGroupsForUser',
-                                      path='/userpool/',
-                                      x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser'
-                                      )
+                                                            'MaxResults': 100},
+                                            target='ListGroupsForUser',
+                                            path='/userpool/',
+                                            x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser'
+                                            )
         self.logger.debug('Trying to get groups for the user...')
         response = self._sso.session.post(self.url,
                                           json=payload)
+        if not response.ok:
+            self.logger.error(response.text)
+            return []
         return response.json().get('Groups', [])
 
 
@@ -412,12 +427,15 @@ class PermissionSet(Entity):
         """
         content_string = {'permissionSetId': self.id}
         payload = self._sso.get_api_payload(content_string=content_string,
-                                      target='GetPermissionsPolicy',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.GetPermissionsPolicy'
-                                      )
+                                            target='GetPermissionsPolicy',
+                                            path='/control/',
+                                            x_amz_target='com.amazon.switchboard.service.SWBService.GetPermissionsPolicy'
+                                            )
         response = self._sso.session.post(self.url,
                                           json=payload)
+        if not response.ok:
+            self.logger.error(response.text)
+            return None
         return response.json()
 
     @property
@@ -447,13 +465,16 @@ class PermissionSet(Entity):
                               'onlyOutOfSync': 'false',
                               'marker': marker}
         payload = self._sso.get_api_payload(content_string=content_string,
-                                      target='ListAccountsWithProvisionedPermissionSet',
-                                      path='/control/',
-                                      x_amz_target=target
-                                      )
+                                            target='ListAccountsWithProvisionedPermissionSet',
+                                            path='/control/',
+                                            x_amz_target=target
+                                            )
         self.logger.debug('Trying to list accounts details...')
         response = self._sso.session.post(self.url,
                                           json=payload)
+        if not response.ok:
+            self.logger.error(response.text)
+            return [], None
         return response.json().get('accountIds', []), response.json().get('marker', '')
 
     def assign_custom_policy_to_permission_set(self,
@@ -471,19 +492,18 @@ class PermissionSet(Entity):
         content_string = {'permissionSetId': self.id,
                           'policyDocument': json.dumps(policy_document)
                           }
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='PutPermissionsPolicy',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.PutPermissionsPolicy'
-                                      )
+        target = 'com.amazon.switchboard.service.SWBService.PutPermissionsPolicy'
+        payload = self._sso.get_api_payload(content_string=content_string,
+                                            target='PutPermissionsPolicy',
+                                            path='/control/',
+                                            x_amz_target=target)
         response = self._sso.session.post(self.url,
                                           json=payload)
+        if not response.ok:
+            self.logger.error(response.text)
         return response.ok
 
-    def update(self,
-               description=' ',
-               relay_state='',
-               ttl=''):
+    def update(self, description=' ', relay_state='', ttl=''):
         """The relayState of the permission_set.
 
         Args:
@@ -502,13 +522,14 @@ class PermissionSet(Entity):
         content_string = {'permissionSetId': self.id,
                           'description': new_description,
                           'ttl': new_ttl,
-                          'relayState': new_relay_state
-                          }
+                          'relayState': new_relay_state}
+        target = 'com.amazon.switchboard.service.SWBService.UpdatePermissionSet'
         payload = self._sso.get_api_payload(content_string=content_string,
-                                      target='UpdatePermissionSet',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.UpdatePermissionSet'
-                                      )
+                                            target='UpdatePermissionSet',
+                                            path='/control/',
+                                            x_amz_target=target)
         response = self._sso.session.post(self.url,
                                           json=payload)
+        if not response.ok:
+            self.logger.error(response.text)
         return response.ok
