@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # File: awsssolib.py
 #
-# Copyright 2020 Sayantan Khanra
+# Copyright 2020 Sayantan Khanra, Costas Tyfoxylos
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -105,7 +105,7 @@ class Sso(LoggerMixin):
         """Generates the payload for calling the AWS SSO APIs.
 
         Returns:
-            deepcopy: Returns a deepcopy object of the payload
+            payload (dict): Returns a deepcopy object of the payload
 
         """
         target = Sso._validate_target(target)
