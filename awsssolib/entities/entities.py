@@ -515,13 +515,10 @@ class PermissionSet(Entity):
             bool: True or False
 
         """
-        new_description = description if description != ' ' else self.description
-        new_relay_state = relay_state if relay_state else self.relay_state
-        new_ttl = ttl if ttl else self.ttl
         content_string = {'permissionSetId': self.id,
-                          'description': new_description,
-                          'ttl': new_ttl,
-                          'relayState': new_relay_state}
+                          'description': description if description != ' ' else self.description,
+                          'ttl': ttl if ttl else self.ttl,
+                          'relayState': relay_state if relay_state else self.relay_state}
         target = 'com.amazon.switchboard.service.SWBService.UpdatePermissionSet'
         payload = self._sso.get_api_payload(content_string=content_string,
                                             target='UpdatePermissionSet',
