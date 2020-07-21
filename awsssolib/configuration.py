@@ -47,4 +47,5 @@ SUPPORTED_TARGETS = ['GetUserPoolInfo',
                      'PutPermissionsPolicy',
                      'GetPermissionsPolicy',
                      'ListAccountsWithProvisionedPermissionSet',
-                     'UpdatePermissionSet']
+                     'UpdatePermissionSet',
+                     'listAccounts']

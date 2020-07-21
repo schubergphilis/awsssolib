@@ -155,14 +155,22 @@ class Sso(LoggerMixin):
         """The aws accounts in aws sso.
 
         Returns:
-            list: The id of directory configured in SSO
+            accounts (generator): The accounts configured in SSO
 
         """
-        accounts, next_token = self._list_accounts_pagination()
-        while next_token:
-            account_list, next_token = self._list_accounts_pagination(next_token=next_token)
-            accounts = accounts + account_list
-        return accounts
+        headers = {'Content-Type': 'application/x-amz-json-1.1',
+                   'Content-Encoding': "amz-1.0",
+                   'X-Amz-Target': 'AWSOrganizationsV20161128.ListAccounts',
+                   'X-Amz-User-Agent': 'aws-sdk-js/2.152.0 promise'}
+        return self._get_paginated_results(content_payload={},
+                                           path='',
+                                           target='listAccounts',
+                                           amz_target='AWSOrganizationsV20161128.ListAccounts',
+                                           region='us-east-1',
+                                           object_type=Account,
+                                           object_group='Accounts',
+                                           url=f'{self.api_url}/organizations',
+                                           headers=headers)
 
     @property
     def users(self):
@@ -206,19 +214,17 @@ class Sso(LoggerMixin):
         """The permission_sets configured in SSO.
 
         Returns:
-            list: The list of groups configured in SSO
+            permission_sets (generator): The permission sets configured in SSO
 
         """
-        payload = Sso.get_api_payload(content_string={},
-                                      target='ListPermissionSets',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.ListPermissionSets',
-                                      region=self.aws_region
-                                      )
-        self.logger.debug('Trying to account details...')
-        response = self.session.post(self.endpoint_url,
-                                     json=payload)
-        return [PermissionSet(self, data) for data in response.json().get('permissionSets')]
+        return self._get_paginated_results(content_payload={},
+                                           path='control',
+                                           target='ListPermissionSets',
+                                           amz_target='com.amazon.switchboard.service.SWBService.ListPermissionSets',
+                                           region=self.aws_region,
+                                           object_type=PermissionSet,
+                                           object_group='permissionSets',
+                                           url=self.endpoint_url)
 
     def get_user_by_name(self, user_name):
         """The user configured in SSO.
@@ -281,9 +287,8 @@ class Sso(LoggerMixin):
             PermissionSet: The PermissionSet object
 
         """
-        return next(
-            (permission_set for permission_set in self.permission_sets if permission_set.name == permission_set_name),
-            None)
+        return next((permission_set for permission_set in self.permission_sets
+                     if permission_set.name == permission_set_name), None)
 
     def _provision_application_profile_for_aws_account_instance(self, permission_set_name, account_name):
         method = 'ProvisionApplicationProfileForAWSAccountInstance'
@@ -294,16 +299,17 @@ class Sso(LoggerMixin):
                                       target=method,
                                       path='/control/',
                                       x_amz_target=f'com.amazon.switchboard.service.SWBService.{method}',
-                                      region=self.aws_region
-                                      )
+                                      region=self.aws_region)
         self.logger.debug('Trying to provision application profile for aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
+        if not response.ok:
+            raise ValueError(response.text)
         return response.json().get('applicationProfile', {}).get('profileId', '')
 
     def _get_aws_account_profile_for_permission_set(self, account_name, permission_set_name):
-        return next((profile for profile in self.get_account_by_name(account_name).associated_profiles if
-                     profile.get('name') == permission_set_name), {})
+        return next((profile for profile in self.get_account_by_name(account_name).associated_profiles
+                     if profile.get('name') == permission_set_name), None)
 
     def associate_group_to_account(self, group_name, account_name, permission_set_name):
         """Associates a group with an account with proper permissions.
@@ -337,6 +343,8 @@ class Sso(LoggerMixin):
         self.logger.debug('Trying to assign groups to aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
+        if not response.ok:
+            self.logger.error(f'Received :{response.text}')
         return response.ok
 
     def disassociate_group_from_account(self, group_name, account_name, permission_set_name):
@@ -374,8 +382,7 @@ class Sso(LoggerMixin):
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
-            self.logger.error(f'Error! Received :{response.text}')
-        LOGGER.debug(response)
+            self.logger.error(f'Received :{response.text}')
         return response.ok
 
     def associate_user_to_account(self, user_name, account_name, permission_set_name):
@@ -416,6 +423,8 @@ class Sso(LoggerMixin):
         self.logger.debug('Trying to assign groups to aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
+        if not response.ok:
+            self.logger.error(f'Received :{response.text}')
         return response.ok
 
     def disassociate_user_from_account(self, user_name, account_name, permission_set_name):
@@ -459,59 +468,8 @@ class Sso(LoggerMixin):
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
-            self.logger.error(f'Error! Received :{response.text}')
-        self.logger.debug(response)
+            self.logger.error(f'Received :{response.text}')
         return response.ok
-
-    def _list_accounts_pagination(self, next_token=None):
-        content_string = {} if not next_token else {'NextToken': next_token}
-        payload = {'contentString': json.dumps(content_string),
-                   'headers': {'Content-Type': 'application/x-amz-json-1.1',
-                               'Content-Encoding': "amz-1.0",
-                               'X-Amz-Target': 'AWSOrganizationsV20161128.ListAccounts',
-                               'X-Amz-User-Agent': 'aws-sdk-js/2.152.0 promise'},
-                   'method': 'POST',
-                   'operation': 'listAccounts',
-                   'params': {},
-                   'path': '/',
-                   'region': 'us-east-1'}
-        self.logger.debug('Trying to list account details...')
-        response = self.session.post(f'{self.api_url}/organizations',
-                                     json=payload)
-        return [Account(self, data) for data in response.json().get('Accounts')], response.json().get('NextToken', '')
-
-    # def _list_users_pagination(self, next_token=None):
-    #     content_string = {"IdentityStoreId": self.sso_directory_id,
-    #                       "MaxResults": 25}
-    #     if next_token:
-    #         content_string.update({'NextToken': next_token})
-    #     path = 'identitystore'
-    #     payload = Sso.get_api_payload(content_string=content_string,
-    #                                   target='SearchUsers',
-    #                                   path=f'/{path}/',
-    #                                   x_amz_target='com.amazonaws.identitystore.AWSIdentityStoreService.SearchUsers',
-    #                                   region=self.aws_region
-    #                                   )
-    #     self.logger.debug('Trying to list user details...')
-    #     response = self.session.post(f'{self.api_url}/{path}',
-    #                                  json=payload)
-    #     return [User(self, data) for data in response.json().get('Users')], response.json().get('NextToken', '')
-
-    # def _list_groups_pagination(self, next_token=None):
-    #     self.logger.debug('Trying to get group list in sso')
-    #
-    #     if next_token:
-    #         content_string.update({'NextToken': next_token})
-    #
-    #     payload = Sso.get_api_payload(content_string=content_string,
-    #                                   target='SearchGroups',
-    #                                   path=f'/{path}/',
-    #                                   x_amz_target='com.amazonaws.swbup.service.SWBUPService.SearchGroups',
-    #                                   region=self.aws_region
-    #                                   )
-    #     response = self.session.post(f'{self.api_url}/{path}',
-    #                                  json=payload)
-    #     return [Group(self, data) for data in response.json().get('Groups')], response.json().get('NextToken', '')
 
     def _get_paginated_results(self,
                                content_payload,
@@ -520,13 +478,17 @@ class Sso(LoggerMixin):
                                amz_target,
                                region,
                                object_type,
-                               object_group):
+                               object_group,
+                               url=None,
+                               headers=None):
         payload = self.get_api_payload(content_string=content_payload,
                                        target=target,
-                                       path=f'/{path}/',
+                                       path=f'/{path}/' if path else '/',
                                        x_amz_target=amz_target,
                                        region=region)
-        url = f'{self.api_url}/{path}'
+        if headers:
+            payload.update({'headers': headers})
+        url = url or f'{self.api_url}/{path}'
         response, next_token = self._get_partial_response(url, payload)
         for data in response.json().get(object_group, []):
             yield object_type(self, data)
@@ -539,7 +501,7 @@ class Sso(LoggerMixin):
     def _get_partial_response(self, url, payload):
         response = self.session.post(url, json=payload)
         if not response.ok:
-            raise SystemError(response.text)
+            raise ValueError(response.text)
         next_token = response.json().get('NextToken')
         return response, next_token
 
@@ -565,15 +527,15 @@ class Sso(LoggerMixin):
                           'relayState': relay_state or self.relay_state,
                           'ttl': ttl
                           }
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='CreatePermissionSet',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.CreatePermissionSet',
-                                      region=self.aws_region
-                                      )
+        payload = self.get_api_payload(content_string=content_string,
+                                       target='CreatePermissionSet',
+                                       path='/control/',
+                                       x_amz_target='com.amazon.switchboard.service.SWBService.CreatePermissionSet',
+                                       region=self.aws_region)
         self.logger.debug('Trying to create Permission set...')
-
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         self.logger.debug(response)
-        return PermissionSet(self, response.json().get('permissionSet'))
+        if response.ok:
+            return PermissionSet(self, response.json().get('permissionSet'))
+        return None
