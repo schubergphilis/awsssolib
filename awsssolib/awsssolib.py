@@ -56,7 +56,6 @@ LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
 
-
 class Sso(LoggerMixin):
     """Models AWS SSO."""
     API_CONTENT_TYPE = 'application/json; charset=UTF-8'
@@ -66,13 +65,19 @@ class Sso(LoggerMixin):
     def __init__(self, arn):
         self.aws_authenticator = AwsAuthenticator(arn)
         self._urls = Urls(self.aws_region)
-        self.api_url = f'{self._urls.regional_single_sign_on}/api'
-        self.endpoint_url = f'{self.api_url}/peregrine'
         self.session = self._get_authenticated_session()
 
     @property
     def relay_state(self):
         return f'{self._urls.regional_console}home?region={self.aws_region}#'
+
+    @property
+    def api_url(self):
+        return f'{self._urls.regional_single_sign_on}/api'
+
+    @property
+    def endpoint_url(self):
+        return f'{self.api_url}/peregrine'
 
     @property
     def aws_region(self):
