@@ -34,8 +34,15 @@ Main code for awsssolib.
 import copy
 import logging
 import json
-from awsauthenticationlib import AwsAuthenticator, LoggerMixin, Urls
-from awsssolib.awsssolibexceptions import UnsupportedTarget
+from awsauthenticationlib import (AwsAuthenticator,
+                                  LoggerMixin,
+                                  Urls)
+from awsssolib.awsssolibexceptions import (UnsupportedTarget,
+                                           NoPermissionSet,
+                                           NoAccount,
+                                           NoGroup,
+                                           NoProfileID,
+                                           NoUser)
 from .entities import (Group,
                        User,
                        Account,
@@ -189,7 +196,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
 
     @property
     def accounts(self):
-        """The aws accounts in aws sso.
+        """The aws accounts in sso.
 
         Returns:
             accounts (generator): The accounts configured in SSO
@@ -267,7 +274,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """The user configured in SSO.
 
         Returns:
-            User: The User object
+            user (User): The User object
 
         """
         return next((user for user in self.users if user.name == user_name), None)
@@ -276,7 +283,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """The user configured in SSO.
 
         Returns:
-            User: The User object
+            user (User): The User object
 
         """
         return next((user for user in self.users if user.id == user_id), None)
@@ -285,7 +292,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """The group configured in SSO.
 
         Returns:
-            Group: The Group object
+            group (Group): The Group object
 
         """
         return next((group for group in self.groups if group.name == group_name), None)
@@ -294,7 +301,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """The group configured in SSO.
 
         Returns:
-            Group: The Group object
+            group (Group): The Group object
 
         """
         return next((group for group in self.groups if group.id == group_id), None)
@@ -303,7 +310,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """The account configured in SSO.
 
         Returns:
-            Account: The Account object
+            account (Account): The Account object
 
         """
         return next((account for account in self.accounts if account.name == account_name), None)
@@ -312,7 +319,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """The account configured in SSO.
 
         Returns:
-            Account: The Account object
+            account (Account): The Account object
 
         """
         return next((account for account in self.accounts if account.id == account_id), None)
@@ -321,7 +328,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """The permission-set configured in SSO.
 
         Returns:
-            PermissionSet: The PermissionSet object
+            permission_set (PermissionSet): The PermissionSet object
 
         """
         return next((permission_set for permission_set in self.permission_sets
@@ -329,23 +336,29 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
 
     def _provision_application_profile_for_aws_account_instance(self, permission_set_name, account_name):
         method = 'ProvisionApplicationProfileForAWSAccountInstance'
-        permission_set_id = self.get_permission_set_by_name(permission_set_name).id
-        instance_id = self.get_account_by_name(account_name).instance_id
-        payload = self.get_api_payload(content_string={'permissionSetId': permission_set_id,
-                                                       'instanceId': instance_id},
+        permission_set = self.get_permission_set_by_name(permission_set_name)
+        if not permission_set:
+            raise NoPermissionSet(permission_set_name)
+        account = self.get_account_by_name(account_name)
+        if not account:
+            raise NoAccount(account_name)
+        payload = self.get_api_payload(content_string={'permissionSetId': permission_set.id,
+                                                       'instanceId': account.instance_id},
                                        target=method,
                                        path='/control/',
                                        x_amz_target=f'com.amazon.switchboard.service.SWBService.{method}',
                                        region=self.aws_region)
         self.logger.debug('Trying to provision application profile for aws account...')
-        response = self.session.post(self.endpoint_url,
-                                     json=payload)
+        response = self.session.post(self.endpoint_url, json=payload)
         if not response.ok:
             raise ValueError(response.text)
         return response.json().get('applicationProfile', {}).get('profileId', '')
 
     def _get_aws_account_profile_for_permission_set(self, account_name, permission_set_name):
-        return next((profile for profile in self.get_account_by_name(account_name).associated_profiles
+        account = self.get_account_by_name(account_name)
+        if not account:
+            raise NoAccount(account_name)
+        return next((profile for profile in account.associated_profiles
                      if profile.get('name') == permission_set_name), None)
 
     def associate_group_to_account(self, group_name, account_name, permission_set_name):
@@ -360,14 +373,18 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
             bool: True or False
 
         """
-        group_id = self.get_group_by_name(group_name).id
-        instance_id = self.get_account_by_name(account_name).instance_id
+        group = self.get_group_by_name(group_name)
+        if not group:
+            raise NoGroup(group_name)
+        account = self.get_account_by_name(account_name)
+        if not account:
+            raise NoAccount(account_name)
         profile_id = self._provision_application_profile_for_aws_account_instance(permission_set_name, account_name)
         directory_id = self.directory_id
-        content_string = {'accessorId': group_id,
+        content_string = {'accessorId': group.id,
                           'accessorType': 'GROUP',
-                          'accessorDisplay': {"groupName": group_name},
-                          'instanceId': instance_id,
+                          'accessorDisplay': {'groupName': group_name},
+                          'instanceId': account.instance_id,
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
@@ -394,18 +411,23 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
             bool: True or False
 
         """
-        group_id = self.get_group_by_name(group_name).id
-        instance_id = self.get_account_by_name(account_name).instance_id
-        directory_id = self.directory_id
-        profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get(
-            'profileId')
-        content_string = {'accessorId': group_id,
+        group = self.get_group_by_name(group_name)
+        if not group:
+            raise NoGroup(group_name)
+        account = self.get_account_by_name(account_name)
+        if not account:
+            raise NoAccount(account_name)
+        profile_id = self._get_aws_account_profile_for_permission_set(account_name,
+                                                                      permission_set_name).get('profileId')
+        if not profile_id:
+            raise NoProfileID(f'{account_name}:{permission_set_name}')
+        content_string = {'accessorId': group.id,
                           'accessorType': 'GROUP',
                           'accessorDisplay': {"groupName": group_name},
-                          'instanceId': instance_id,
+                          'instanceId': account.instance_id,
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
-                          'directoryId': directory_id}
+                          'directoryId': self.directory_id}
         payload = self.get_api_payload(content_string=content_string,
                                        target='DisassociateProfile',
                                        path='/control/',
@@ -430,22 +452,24 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
 
         """
         user = self.get_user_by_name(user_name)
-        user_id = user.id
-        user_first_name = user.first_name
-        user_last_name = user.last_name
-        instance_id = self.get_account_by_name(account_name).instance_id
+        if not user:
+            raise NoUser(user_name)
+        account = self.get_account_by_name(account_name)
+        if not account:
+            raise NoAccount(account_name)
         profile_id = self._provision_application_profile_for_aws_account_instance(permission_set_name, account_name)
-        directory_id = self.directory_id
-        content_string = {'accessorId': user_id,
+        if not profile_id:
+            raise NoProfileID(f'{account_name}:{permission_set_name}')
+        content_string = {'accessorId': user.id,
                           'accessorType': 'USER',
                           'accessorDisplay': {'userName': user_name,
-                                              'firstName': user_first_name,
-                                              'last_name': user_last_name,
+                                              'firstName': user.first_name,
+                                              'last_name': user.last_name,
                                               'windowsUpn': user_name},
-                          'instanceId': instance_id,
+                          'instanceId': account.instance_id,
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
-                          'directoryId': directory_id}
+                          'directoryId': self.directory_id}
         payload = self.get_api_payload(content_string=content_string,
                                        target='AssociateProfile',
                                        path='/control/',
@@ -471,30 +495,31 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
 
         """
         user = self.get_user_by_name(user_name)
-        user_id = user.id
-        user_first_name = user.first_name
-        user_last_name = user.last_name
-        instance_id = self.get_account_by_name(account_name).instance_id
-        directory_id = self.directory_id
+        if not user:
+            raise NoUser(user_name)
+        account = self.get_account_by_name(account_name)
+        if not account:
+            raise NoAccount(account_name)
         profile_id = self._get_aws_account_profile_for_permission_set(account_name,
                                                                       permission_set_name).get('profileId')
-        content_string = {'accessorId': user_id,
+        if not profile_id:
+            raise NoProfileID(f'{account_name}:{permission_set_name}')
+        content_string = {'accessorId': user.id,
                           'accessorType': 'USER',
-                          'accessorDisplay': {"userName": user_name,
-                                              "firstName": user_first_name,
-                                              "last_name": user_last_name,
-                                              "windowsUpn": user_name},
-                          'instanceId': instance_id,
+                          'accessorDisplay': {'userName': user_name,
+                                              'firstName': user.first_name,
+                                              'last_name': user.last_name,
+                                              'windowsUpn': user_name},
+                          'instanceId': account.instance_id,
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
-                          'directoryId': directory_id}
+                          'directoryId': self.directory_id}
         payload = self.get_api_payload(content_string=content_string,
                                        target='DisassociateProfile',
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
                                        region=self.aws_region)
         self.logger.debug('Trying to assign groups to aws account...')
-
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
@@ -563,7 +588,6 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        region=self.aws_region)
         self.logger.debug('Trying to create Permission set...')
         response = self.session.post(self.endpoint_url, json=payload)
-        self.logger.debug(response)
         if response.ok:
             return PermissionSet(self, response.json().get('permissionSet'))
         return None

@@ -44,3 +44,23 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 class UnsupportedTarget(Exception):
     """The target call is not supported by the current implementation."""
+
+
+class NoPermissionSet(Exception):
+    """The permission set does not exist."""
+
+
+class NoAccount(Exception):
+    """The account does not exist."""
+
+
+class NoGroup(Exception):
+    """The group does not exist."""
+
+
+class NoProfileID(Exception):
+    """The permission set is not associated with the account."""
+
+
+class NoUser(Exception):
+    """The user does not exist."""
