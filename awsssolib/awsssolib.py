@@ -560,11 +560,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         next_token = response.json().get('NextToken')
         return response, next_token
 
-    def create_permission_set(self,
-                              name,
-                              description=' ',
-                              relay_state=None,
-                              ttl='PT2H'):
+    def create_permission_set(self, name, description=' ', relay_state=None, ttl='PT2H'):
         """Create a permission_set with a aws defined policy or custom policy.
 
         Args:
