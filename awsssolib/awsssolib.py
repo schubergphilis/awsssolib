@@ -41,7 +41,7 @@ from .entities import (Group,
                        Account,
                        PermissionSet)
 
-__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
+__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''18-05-2020'''
 __copyright__ = '''Copyright 2020, Sayantan Khanra, Costas Tyfoxylos'''
