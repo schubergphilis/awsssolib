@@ -97,7 +97,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
             relay_state (str): The relay state of sso.
 
         """
-        return f'{self._urls.regional_console}home?region={self.aws_region}#'
+        return self._urls.regional_relay_state
 
     @property
     def api_url(self):
@@ -375,11 +375,9 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        target='AssociateProfile',
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
-                                       region=self.aws_region
-                                       )
+                                       region=self.aws_region)
         self.logger.debug('Trying to assign groups to aws account...')
-        response = self.session.post(self.endpoint_url,
-                                     json=payload)
+        response = self.session.post(self.endpoint_url, json=payload)
         if not response.ok:
             self.logger.error('Received :%s', response.text)
         return response.ok
@@ -412,12 +410,9 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        target='DisassociateProfile',
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
-                                       region=self.aws_region
-                                       )
+                                       region=self.aws_region)
         self.logger.debug('Trying to assign groups to aws account...')
-
-        response = self.session.post(self.endpoint_url,
-                                     json=payload)
+        response = self.session.post(self.endpoint_url, json=payload)
         if not response.ok:
             self.logger.error('Received :%s', response.text)
         return response.ok
@@ -443,10 +438,10 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         directory_id = self.directory_id
         content_string = {'accessorId': user_id,
                           'accessorType': 'USER',
-                          'accessorDisplay': {"userName": user_name,
-                                              "firstName": user_first_name,
-                                              "last_name": user_last_name,
-                                              "windowsUpn": user_name},
+                          'accessorDisplay': {'userName': user_name,
+                                              'firstName': user_first_name,
+                                              'last_name': user_last_name,
+                                              'windowsUpn': user_name},
                           'instanceId': instance_id,
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
@@ -455,8 +450,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        target='AssociateProfile',
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
-                                       region=self.aws_region
-                                       )
+                                       region=self.aws_region)
         self.logger.debug('Trying to assign groups to aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
@@ -482,8 +476,8 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         user_last_name = user.last_name
         instance_id = self.get_account_by_name(account_name).instance_id
         directory_id = self.directory_id
-        profile_id = self._get_aws_account_profile_for_permission_set(account_name, permission_set_name).get(
-            'profileId')
+        profile_id = self._get_aws_account_profile_for_permission_set(account_name,
+                                                                      permission_set_name).get('profileId')
         content_string = {'accessorId': user_id,
                           'accessorType': 'USER',
                           'accessorDisplay': {"userName": user_name,
@@ -498,8 +492,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        target='DisassociateProfile',
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
-                                       region=self.aws_region
-                                       )
+                                       region=self.aws_region)
         self.logger.debug('Trying to assign groups to aws account...')
 
         response = self.session.post(self.endpoint_url,
