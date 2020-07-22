@@ -467,35 +467,15 @@ class PermissionSet(Entity):
             list: Accounts provisioned with the permission set
 
         """
-        account_list = []
-        account_ids, marker = self._list_provisioned_accounts_pagination()
-        while marker:
-            accountids, marker = self._list_provisioned_accounts_pagination(marker=marker)
-            account_ids = account_ids + accountids
-        for account_id in account_ids:
-            account_list.append(self._sso.get_account_by_id(account_id))
-        return account_list
-
-    def _list_provisioned_accounts_pagination(self, marker=None):
+        content_payload = {'permissionSetId': self.id,
+                           'onlyOutOfSync': 'false'}
         target = 'com.amazon.switchboard.service.SWBService.ListAccountsWithProvisionedPermissionSet'
-        if not marker:
-            content_string = {'permissionSetId': self.id,
-                              'onlyOutOfSync': 'false'}
-        else:
-            content_string = {'permissionSetId': self.id,
-                              'onlyOutOfSync': 'false',
-                              'marker': marker}
-        payload = self._sso.get_api_payload(content_string=content_string,
-                                            target='ListAccountsWithProvisionedPermissionSet',
-                                            path='/control/',
-                                            x_amz_target=target)
-        self.logger.debug('Trying to list accounts details...')
-        response = self._sso.session.post(self.url,
-                                          json=payload)
-        if not response.ok:
-            self.logger.error(response.text)
-            return [], None
-        return response.json().get('accountIds', []), response.json().get('marker', '')
+        for account_id in self._sso._get_paginated_results(content_payload=content_payload,
+                                                           path='control',
+                                                           target='ListAccountsWithProvisionedPermissionSet',
+                                                           amz_target=target,
+                                                           object_group='accountIds'):
+            yield self._sso.get_account_by_id(account_id)
 
     def assign_custom_policy_to_permission_set(self, policy_document):
         """Assign Custom policy to a permission_set.

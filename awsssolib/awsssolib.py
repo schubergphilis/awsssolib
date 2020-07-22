@@ -531,9 +531,10 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                path,
                                target,
                                amz_target,
-                               region,
-                               object_type,
                                object_group,
+                               object_type=None,
+                               region=None,
+                               next_token_marker='NextToken',
                                url=None,
                                headers=None):
         payload = self.get_api_payload(content_string=content_payload,
@@ -544,20 +545,26 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         if headers:
             payload.update({'headers': headers})
         url = url or f'{self.api_url}/{path}'
-        response, next_token = self._get_partial_response(url, payload)
+        response, next_token = self._get_partial_response(url, payload, next_token_marker)
         for data in response.json().get(object_group, []):
-            yield object_type(self, data)
-        while next_token:
-            payload.update({'NextToken': next_token})
-            response, next_token = self._get_partial_response(url, payload)
-            for data in response.json().get(object_group, []):
+            if object_type:
                 yield object_type(self, data)
+            else:
+                yield data
+        while next_token:
+            payload.update({next_token_marker: next_token})
+            response, next_token = self._get_partial_response(url, payload, next_token_marker)
+            for data in response.json().get(object_group, []):
+                if object_type:
+                    yield object_type(self, data)
+                else:
+                    yield data
 
-    def _get_partial_response(self, url, payload):
+    def _get_partial_response(self, url, payload, next_token_marker):
         response = self.session.post(url, json=payload)
         if not response.ok:
             raise ValueError(response.text)
-        next_token = response.json().get('NextToken')
+        next_token = response.json().get(next_token_marker)
         return response, next_token
 
     def create_permission_set(self, name, description=' ', relay_state=None, ttl='PT2H'):
