@@ -468,7 +468,8 @@ class PermissionSet(Entity):
                                                            path='control',
                                                            target='ListAccountsWithProvisionedPermissionSet',
                                                            amz_target=target,
-                                                           object_group='accountIds'):
+                                                           object_group='accountIds',
+                                                           next_token_marker='marker',):
             yield self._sso.get_account_by_id(account_id)
 
     def assign_custom_policy_to_permission_set(self, policy_document):
