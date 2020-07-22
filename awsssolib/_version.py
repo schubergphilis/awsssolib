@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # File: _version.py
 #
-# Copyright 2020 Sayantan Khanra
+# Copyright 2020 Sayantan Khanra, Costas Tyfoxylos
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -33,13 +33,14 @@ Manages the version of the package.
 
 import os
 
-__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>'''
+__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''18-05-2020'''
-__copyright__ = '''Copyright 2020, Sayantan Khanra'''
+__copyright__ = '''Copyright 2020, Sayantan Khanra, Costas Tyfoxylos'''
+__credits__ = ["Sayantan Khanra", "Costas Tyfoxylos"]
 __license__ = '''MIT'''
-__maintainer__ = '''Sayantan Khanra'''
-__email__ = '''<skhanra@schubergphilis.com>'''
+__maintainer__ = '''Sayantan Khanra, Costas Tyfoxylos'''
+__email__ = '''<skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 VERSION_FILE_PATH = os.path.abspath(

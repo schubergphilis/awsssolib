@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # File: __init__.py
 #
-# Copyright 2020 Sayantan Khanra
+# Copyright 2020 Sayantan Khanra, Costas Tyfoxylos
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to
@@ -31,16 +31,19 @@ Import all parts from awsssolib here
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
 """
+from awsssolib.awsssolib import Sso
 from ._version import __version__
 
-__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>'''
+__author__ = '''Sayantan Khanra <skhanra@schubergphilis.com>, Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
 __date__ = '''18-05-2020'''
-__copyright__ = '''Copyright 2020, Sayantan Khanra'''
+__copyright__ = '''Copyright 2020, Sayantan Khanra, Costas Tyfoxylos'''
+__credits__ = ["Sayantan Khanra", "Costas Tyfoxylos"]
 __license__ = '''MIT'''
-__maintainer__ = '''Sayantan Khanra'''
-__email__ = '''<skhanra@schubergphilis.com>'''
+__maintainer__ = '''Sayantan Khanra, Costas Tyfoxylos'''
+__email__ = '''<skhanra@schubergphilis.com>, <ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 # This is to 'use' the module(s), so lint doesn't complain
 assert __version__
+assert Sso
