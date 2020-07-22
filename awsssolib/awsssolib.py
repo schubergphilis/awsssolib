@@ -35,7 +35,6 @@ import copy
 import logging
 import json
 from awsauthenticationlib import AwsAuthenticator, LoggerMixin, Urls
-from awsssolib.configuration import SUPPORTED_TARGETS
 from awsssolib.awsssolibexceptions import UnsupportedTarget
 from .entities import (Group,
                        User,
@@ -56,6 +55,25 @@ __status__ = '''Development'''  # "Prototype", "Development", "Production".
 LOGGER_BASENAME = '''awsssolib'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
+
+SUPPORTED_TARGETS = ['GetUserPoolInfo',
+                     'SearchGroups',
+                     'ProvisionApplicationInstanceForAWSAccount',
+                     'ListPermissionSets',
+                     'GetApplicationInstanceForAWSAccount',
+                     'ProvisionApplicationProfileForAWSAccountInstance',
+                     'AssociateProfile',
+                     'ListAWSAccountProfiles',
+                     'DisassociateProfile',
+                     'SearchUsers',
+                     'ListMembersInGroup',
+                     'ListGroupsForUser',
+                     'CreatePermissionSet',
+                     'PutPermissionsPolicy',
+                     'GetPermissionsPolicy',
+                     'ListAccountsWithProvisionedPermissionSet',
+                     'UpdatePermissionSet',
+                     'listAccounts']
 
 
 class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
@@ -111,8 +129,8 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         """
         return self.aws_authenticator.region
 
-    @staticmethod
-    def get_api_payload(content_string,  # pylint: disable=too-many-arguments
+    def get_api_payload(self,  # pylint: disable=too-many-arguments
+                        content_string,
                         target,
                         method='POST',
                         params=None,
@@ -127,16 +145,16 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
             payload (dict): Returns a deepcopy object of the payload
 
         """
-        target = Sso._validate_target(target)
+        target = self._validate_target(target)
         payload = {'contentString': json.dumps(content_string),
-                   'headers': {'Content-Type': content_type or Sso.API_CONTENT_TYPE,
-                               'Content-Encoding': content_encoding or Sso.API_CONTENT_ENCODING,
+                   'headers': {'Content-Type': content_type or self.API_CONTENT_TYPE,
+                               'Content-Encoding': content_encoding or self.API_CONTENT_ENCODING,
                                'X-Amz-Target': x_amz_target},
                    'method': method,
                    'operation': target,
                    'params': params or {},
                    'path': path,
-                   'region': region or Sso.DEFAULT_AWS_REGION}
+                   'region': region or self.DEFAULT_AWS_REGION}
         return copy.deepcopy(payload)
 
     @staticmethod
@@ -313,12 +331,12 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         method = 'ProvisionApplicationProfileForAWSAccountInstance'
         permission_set_id = self.get_permission_set_by_name(permission_set_name).id
         instance_id = self.get_account_by_name(account_name).instance_id
-        payload = Sso.get_api_payload(content_string={'permissionSetId': permission_set_id,
-                                                      'instanceId': instance_id},
-                                      target=method,
-                                      path='/control/',
-                                      x_amz_target=f'com.amazon.switchboard.service.SWBService.{method}',
-                                      region=self.aws_region)
+        payload = self.get_api_payload(content_string={'permissionSetId': permission_set_id,
+                                                       'instanceId': instance_id},
+                                       target=method,
+                                       path='/control/',
+                                       x_amz_target=f'com.amazon.switchboard.service.SWBService.{method}',
+                                       region=self.aws_region)
         self.logger.debug('Trying to provision application profile for aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
@@ -353,12 +371,12 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='AssociateProfile',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
-                                      region=self.aws_region
-                                      )
+        payload = self.get_api_payload(content_string=content_string,
+                                       target='AssociateProfile',
+                                       path='/control/',
+                                       x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
+                                       region=self.aws_region
+                                       )
         self.logger.debug('Trying to assign groups to aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
@@ -390,12 +408,12 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='DisassociateProfile',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
-                                      region=self.aws_region
-                                      )
+        payload = self.get_api_payload(content_string=content_string,
+                                       target='DisassociateProfile',
+                                       path='/control/',
+                                       x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
+                                       region=self.aws_region
+                                       )
         self.logger.debug('Trying to assign groups to aws account...')
 
         response = self.session.post(self.endpoint_url,
@@ -433,12 +451,12 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='AssociateProfile',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
-                                      region=self.aws_region
-                                      )
+        payload = self.get_api_payload(content_string=content_string,
+                                       target='AssociateProfile',
+                                       path='/control/',
+                                       x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
+                                       region=self.aws_region
+                                       )
         self.logger.debug('Trying to assign groups to aws account...')
         response = self.session.post(self.endpoint_url,
                                      json=payload)
@@ -476,12 +494,12 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                           'profileId': profile_id,
                           'directoryType': 'UserPool',
                           'directoryId': directory_id}
-        payload = Sso.get_api_payload(content_string=content_string,
-                                      target='DisassociateProfile',
-                                      path='/control/',
-                                      x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
-                                      region=self.aws_region
-                                      )
+        payload = self.get_api_payload(content_string=content_string,
+                                       target='DisassociateProfile',
+                                       path='/control/',
+                                       x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
+                                       region=self.aws_region
+                                       )
         self.logger.debug('Trying to assign groups to aws account...')
 
         response = self.session.post(self.endpoint_url,
