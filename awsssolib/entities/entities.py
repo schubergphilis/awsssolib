@@ -515,6 +515,7 @@ class PermissionSet(Entity):
                                             target='UpdatePermissionSet',
                                             path='/control/',
                                             x_amz_target=target)
+        self.logger.debug('Posting to url %s payload of %s:', self.url, payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
