@@ -552,7 +552,9 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
             else:
                 yield data
         while next_token:
-            payload.update({next_token_marker: next_token})
+            content_string = copy.deepcopy(json.loads(payload.get('contentString')))
+            content_string.update({next_token_marker: next_token})
+            payload.update({'contentString': json.dumps(content_string)})
             response, next_token = self._get_partial_response(url, payload, next_token_marker)
             for data in response.json().get(object_group, []):
                 if object_type:
