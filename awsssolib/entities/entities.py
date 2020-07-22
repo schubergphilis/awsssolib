@@ -235,9 +235,6 @@ class Account(Entity):
 class User(Entity):
     """Models the user object of SSO."""
 
-    def __init__(self, sso_instance, data):
-        super().__init__(sso_instance, data)
-
     @property
     def url(self):
         """Url for the user.
@@ -366,9 +363,6 @@ class User(Entity):
 class PermissionSet(Entity):
     """Models the permission set object of SSO."""
 
-    def __init__(self, sso_instance, data):
-        super().__init__(sso_instance, data)
-
     @property
     def url(self):
         """Url of the permission set.
@@ -470,7 +464,7 @@ class PermissionSet(Entity):
         content_payload = {'permissionSetId': self.id,
                            'onlyOutOfSync': 'false'}
         target = 'com.amazon.switchboard.service.SWBService.ListAccountsWithProvisionedPermissionSet'
-        for account_id in self._sso._get_paginated_results(content_payload=content_payload,
+        for account_id in self._sso._get_paginated_results(content_payload=content_payload,  # pylint: disable=protected-access
                                                            path='control',
                                                            target='ListAccountsWithProvisionedPermissionSet',
                                                            amz_target=target,
