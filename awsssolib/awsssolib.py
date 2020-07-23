@@ -565,7 +565,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
     def _get_partial_response(self, url, payload, next_token_marker):
         response = self.session.post(url, json=payload)
         if not response.ok:
-            raise ValueError(response.text)
+            raise ValueError(response.json())
         next_token = response.json().get(next_token_marker)
         return response, next_token
 
