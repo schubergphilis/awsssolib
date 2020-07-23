@@ -526,7 +526,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
             self.logger.error('Received :%s', response.text)
         return response.ok
 
-    def _get_paginated_results(self,  # pylint: disable=too-many-arguments
+    def _get_paginated_results(self,  # pylint: disable=too-many-arguments, too-many-locals
                                content_payload,
                                path,
                                target,

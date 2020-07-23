@@ -113,7 +113,7 @@ class Group(Entity):
         content_payload = {'GroupId': self.id,
                            'MaxResults': 100}
         target = 'com.amazonaws.swbup.service.SWBUPService.ListMembersInGroup'
-        for user in self._sso._get_paginated_results(content_payload=content_payload,
+        for user in self._sso._get_paginated_results(content_payload=content_payload,  # pylint: disable=protected-access
                                                      path='userpool',
                                                      target='ListMembersInGroup',
                                                      amz_target=target,
@@ -348,12 +348,12 @@ class User(Entity):
         content_payload = {'UserId': self.id,
                            'MaxResults': 100}
         target = 'com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser'
-        for group in self._sso._get_paginated_results(content_payload=content_payload,
-                                                         path='userpool',
-                                                         target='ListGroupsForUser',
-                                                         amz_target=target,
-                                                         object_group='Groups',
-                                                         url=self.url):
+        for group in self._sso._get_paginated_results(content_payload=content_payload,  # pylint: disable=protected-access
+                                                      path='userpool',
+                                                      target='ListGroupsForUser',
+                                                      amz_target=target,
+                                                      object_group='Groups',
+                                                      url=self.url):
             yield self._sso.get_group_by_id(group.get('GroupId'))
 
 
