@@ -204,7 +204,7 @@ class Account(Entity):
                                                 target='GetApplicationInstanceForAWSAccount',
                                                 path='/control/',
                                                 x_amz_target=target)
-            self.logger.debug('Trying to get instance id for aws account...')
+            self.logger.debug('Trying to get instance id for aws account with payload: %s', payload)
             response = self._sso.session.post(self.url, json=payload)
             self._instance_id = response.json().get('applicationInstance', {}).get('instanceId', '')
         return self._instance_id
@@ -222,7 +222,7 @@ class Account(Entity):
                                             target='ListAWSAccountProfiles',
                                             path='/control/',
                                             x_amz_target=target)
-        self.logger.debug('Trying to provision application profile for aws account...')
+        self.logger.debug('Trying to provision application profile for aws account with payload: %s', payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
@@ -444,6 +444,7 @@ class PermissionSet(Entity):
                                             target='GetPermissionsPolicy',
                                             path='/control/',
                                             x_amz_target=target)
+        self.logger.debug('Getting permission policy for permission_set with payload of %s:', payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
@@ -487,6 +488,7 @@ class PermissionSet(Entity):
                                             target='PutPermissionsPolicy',
                                             path='/control/',
                                             x_amz_target=target)
+        self.logger.debug('Assigning custom policy to permission setwith payload %s:', payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
