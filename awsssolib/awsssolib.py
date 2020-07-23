@@ -187,7 +187,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                            path='/userpool/',
                                            x_amz_target='com.amazonaws.swbup.service.SWBUPService.GetUserPoolInfo',
                                            region=self.aws_region)
-            self.logger.debug('Trying to get directory id for sso')
+            self.logger.debug('Trying to get directory id for sso with payload: %s', payload)
             response = self.session.post(f'{self.api_url}/userpool', json=payload)
             if not response.ok:
                 raise ValueError(response.text)
@@ -348,7 +348,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        path='/control/',
                                        x_amz_target=f'com.amazon.switchboard.service.SWBService.{method}',
                                        region=self.aws_region)
-        self.logger.debug('Trying to provision application profile for aws account...')
+        self.logger.debug('Trying to provision application profile for aws account with payload: %s', payload)
         response = self.session.post(self.endpoint_url, json=payload)
         if not response.ok:
             raise ValueError(response.text)
@@ -393,7 +393,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
                                        region=self.aws_region)
-        self.logger.debug('Trying to assign groups to aws account...')
+        self.logger.debug('Trying to assign groups to aws account with payload: %s', payload)
         response = self.session.post(self.endpoint_url, json=payload)
         if not response.ok:
             self.logger.error('Received :%s', response.text)
@@ -433,7 +433,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
                                        region=self.aws_region)
-        self.logger.debug('Trying to assign groups to aws account...')
+        self.logger.debug('Trying to disassociate group from aws account with payload: %s', payload)
         response = self.session.post(self.endpoint_url, json=payload)
         if not response.ok:
             self.logger.error('Received :%s', response.text)
@@ -475,7 +475,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.AssociateProfile',
                                        region=self.aws_region)
-        self.logger.debug('Trying to assign groups to aws account...')
+        self.logger.debug('Trying to assign users to aws account with payload: %s', payload)
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
@@ -519,14 +519,14 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.DisassociateProfile',
                                        region=self.aws_region)
-        self.logger.debug('Trying to assign groups to aws account...')
+        self.logger.debug('Trying to disassociate users from aws account with payload: %s', payload)
         response = self.session.post(self.endpoint_url,
                                      json=payload)
         if not response.ok:
             self.logger.error('Received :%s', response.text)
         return response.ok
 
-    def _get_paginated_results(self,  # pylint: disable=too-many-arguments
+    def _get_paginated_results(self,  # pylint: disable=too-many-arguments, too-many-locals
                                content_payload,
                                path,
                                target,
@@ -591,7 +591,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                        path='/control/',
                                        x_amz_target='com.amazon.switchboard.service.SWBService.CreatePermissionSet',
                                        region=self.aws_region)
-        self.logger.debug('Trying to create Permission set...')
+        self.logger.debug('Trying to create Permission set with payload: %s', payload)
         response = self.session.post(self.endpoint_url, json=payload)
         if response.ok:
             return PermissionSet(self, response.json().get('permissionSet'))

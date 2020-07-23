@@ -110,18 +110,16 @@ class Group(Entity):
             users (list): The users part of the group
 
         """
-        payload = self._sso.get_api_payload(content_string={'GroupId': self.id,
-                                                            'MaxResults': 100},
-                                            target='ListMembersInGroup',
-                                            path='/userpool/',
-                                            x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListMembersInGroup'
-                                            )
-        self.logger.debug('Trying to get users for the groups...')
-        response = self._sso.session.post(self.url, json=payload)
-        if not response.ok:
-            self.logger.error(response.text)
-            return []
-        return response.json().get('Members', [])
+        content_payload = {'GroupId': self.id,
+                           'MaxResults': 100}
+        target = 'com.amazonaws.swbup.service.SWBUPService.ListMembersInGroup'
+        for user in self._sso._get_paginated_results(content_payload=content_payload,  # pylint: disable=protected-access
+                                                     path='userpool',
+                                                     target='ListMembersInGroup',
+                                                     amz_target=target,
+                                                     object_group='Members',
+                                                     url=self.url):
+            yield self._sso.get_user_by_id(user.get('Id'))
 
 
 class Account(Entity):
@@ -206,7 +204,7 @@ class Account(Entity):
                                                 target='GetApplicationInstanceForAWSAccount',
                                                 path='/control/',
                                                 x_amz_target=target)
-            self.logger.debug('Trying to get instance id for aws account...')
+            self.logger.debug('Trying to get instance id for aws account with payload: %s', payload)
             response = self._sso.session.post(self.url, json=payload)
             self._instance_id = response.json().get('applicationInstance', {}).get('instanceId', '')
         return self._instance_id
@@ -224,7 +222,7 @@ class Account(Entity):
                                             target='ListAWSAccountProfiles',
                                             path='/control/',
                                             x_amz_target=target)
-        self.logger.debug('Trying to provision application profile for aws account...')
+        self.logger.debug('Trying to provision application profile for aws account with payload: %s', payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
@@ -347,17 +345,16 @@ class User(Entity):
             groups (list): The groups associated with the user
 
         """
-        payload = self._sso.get_api_payload(content_string={'UserId': self.id,
-                                                            'MaxResults': 100},
-                                            target='ListGroupsForUser',
-                                            path='/userpool/',
-                                            x_amz_target='com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser')
-        self.logger.debug('Trying to get groups for the user...')
-        response = self._sso.session.post(self.url, json=payload)
-        if not response.ok:
-            self.logger.error(response.text)
-            return []
-        return response.json().get('Groups', [])
+        content_payload = {'UserId': self.id,
+                           'MaxResults': 100}
+        target = 'com.amazonaws.swbup.service.SWBUPService.ListGroupsForUser'
+        for group in self._sso._get_paginated_results(content_payload=content_payload,  # pylint: disable=protected-access
+                                                      path='userpool',
+                                                      target='ListGroupsForUser',
+                                                      amz_target=target,
+                                                      object_group='Groups',
+                                                      url=self.url):
+            yield self._sso.get_group_by_id(group.get('GroupId'))
 
 
 class PermissionSet(Entity):
@@ -447,6 +444,7 @@ class PermissionSet(Entity):
                                             target='GetPermissionsPolicy',
                                             path='/control/',
                                             x_amz_target=target)
+        self.logger.debug('Getting permission policy for permission_set with payload of %s:', payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
@@ -469,7 +467,8 @@ class PermissionSet(Entity):
                                                            target='ListAccountsWithProvisionedPermissionSet',
                                                            amz_target=target,
                                                            object_group='accountIds',
-                                                           next_token_marker='marker',):
+                                                           next_token_marker='marker',
+                                                           url=self._sso.endpoint_url):
             yield self._sso.get_account_by_id(account_id)
 
     def assign_custom_policy_to_permission_set(self, policy_document):
@@ -489,6 +488,7 @@ class PermissionSet(Entity):
                                             target='PutPermissionsPolicy',
                                             path='/control/',
                                             x_amz_target=target)
+        self.logger.debug('Assigning custom policy to permission setwith payload %s:', payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
