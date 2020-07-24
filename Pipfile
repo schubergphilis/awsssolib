@@ -28,4 +28,4 @@ emoji = "~=0.5.3"
 toml = "~=0.10.0"
 
 [packages]
-#awsauthenticatorlib = "~=0.0.1"
+awsauthenticationlib = "~=0.0.1"
