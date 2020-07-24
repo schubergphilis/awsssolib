@@ -37,3 +37,9 @@ History
 ------------------
 
 * Added feature to update permission set"
+
+
+0.0.6 (24-07-2020)
+------------------
+
+* First Release
