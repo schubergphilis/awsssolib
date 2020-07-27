@@ -203,7 +203,7 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
 
         """
         headers = {'Content-Type': 'application/x-amz-json-1.1',
-                   'Content-Encoding': "amz-1.0",
+                   'Content-Encoding': 'amz-1.0',
                    'X-Amz-Target': 'AWSOrganizationsV20161128.ListAccounts',
                    'X-Amz-User-Agent': 'aws-sdk-js/2.152.0 promise'}
         return self._get_paginated_results(content_payload={},
