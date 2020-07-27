@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f7d8166643a2c5dc4b337068b0162ae569368940c558faac8f6311ea459e564c"
+            "sha256": "dfeef900e356eee4c194cfab4a1f1280f40250b04a7de6b5f5ae3b58bf40dc53"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -16,10 +16,10 @@
     "default": {
         "awsauthenticationlib": {
             "hashes": [
-                "sha256:89b9197a66a58b953f70952be8bf6b4b242350881cc211494c17822bb574c5cb"
+                "sha256:15689ff8266a1e7ed32e68907636ce28d95e342d78a73500029b0a05b095ed03"
             ],
             "index": "pypi",
-            "version": "==0.0.1"
+            "version": "==0.0.2"
         },
         "beautifulsoup4": {
             "hashes": [
