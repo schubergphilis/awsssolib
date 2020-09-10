@@ -11,3 +11,9 @@
 ------------------
 
 * bumped awsauthenticationlib
+
+
+0.1.0 (10-09-2020)
+------------------
+
+* New feature added for deleting permission set and permission set policy
