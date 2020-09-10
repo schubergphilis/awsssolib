@@ -80,7 +80,9 @@ SUPPORTED_TARGETS = ['GetUserPoolInfo',
                      'GetPermissionsPolicy',
                      'ListAccountsWithProvisionedPermissionSet',
                      'UpdatePermissionSet',
-                     'listAccounts']
+                     'listAccounts',
+                     'DeletePermissionSet',
+                     'DeletePermissionsPolicy']
 
 
 class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
@@ -596,3 +598,30 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
         if response.ok:
             return PermissionSet(self, response.json().get('permissionSet'))
         return None
+
+    def delete_permission_set(self,
+                              name):
+        """Delete a permission_set .
+
+        Args:
+                name: The name of the permission_set .
+
+        Returns:
+                Bool: Status of the deletion
+
+        """
+        permission_set_id = self.get_permission_set_by_name(name).id
+        content_string = {'permissionSetId': permission_set_id}
+        payload = self.get_api_payload(content_string=content_string,
+                                       target='DeletePermissionSet',
+                                       path='/control/',
+                                       x_amz_target='com.amazon.switchboard.service.SWBService.DeletePermissionSet',
+                                       region=self.aws_region
+                                       )
+        self.logger.debug('Trying to delete Permission set...')
+
+        response = self.session.post(self.endpoint_url,
+                                     json=payload)
+        if not response.ok:
+            self.logger.error('Received :%s', response.text)
+        return response.ok

@@ -488,10 +488,38 @@ class PermissionSet(Entity):
                                             target='PutPermissionsPolicy',
                                             path='/control/',
                                             x_amz_target=target)
-        self.logger.debug('Assigning custom policy to permission setwith payload %s:', payload)
+        self.logger.debug('Assigning custom policy to permission set with payload %s:', payload)
         response = self._sso.session.post(self.url, json=payload)
         if not response.ok:
             self.logger.error(response.text)
+        else:
+            if self.provisioned_accounts:  # pylint: disable=using-constant-test
+                for account in self.provisioned_accounts:
+                    self.logger.debug('Updating associated account %s', account.name)
+                    self._sso._provision_application_profile_for_aws_account_instance(self.name, account.name)  # pylint: disable=protected-access
+        return response.ok
+
+    def delete_custom_policy_from_permission_set(self):
+        """Assign Custom policy to a permission_set.
+
+        Returns:
+            Bool:  True or False
+
+        """
+        content_string = {'permissionSetId': self.id}
+        target = 'com.amazon.switchboard.service.SWBService.DeletePermissionsPolicy'
+        payload = self._sso.get_api_payload(content_string=content_string,
+                                            target='DeletePermissionsPolicy',
+                                            path='/control/',
+                                            x_amz_target=target)
+        response = self._sso.session.post(self.url, json=payload)
+        if not response.ok:
+            self.logger.error(response.text)
+        else:
+            if self.provisioned_accounts:  # pylint: disable=using-constant-test
+                for account in self.provisioned_accounts:
+                    self.logger.debug('Updating associated account %s', account.name)
+                    self._sso._provision_application_profile_for_aws_account_instance(self.name, account.name)  # pylint: disable=protected-access
         return response.ok
 
     def update(self, description=' ', relay_state='', ttl=''):
