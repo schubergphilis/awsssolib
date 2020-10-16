@@ -17,3 +17,9 @@
 ------------------
 
 * New feature added for deleting permission set and permission set policy
+
+
+0.1.1 (16-10-2020)
+------------------
+
+* Bumped dependencies
