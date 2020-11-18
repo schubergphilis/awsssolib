@@ -270,7 +270,8 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
                                            region=self.aws_region,
                                            object_type=PermissionSet,
                                            object_group='permissionSets',
-                                           url=self.endpoint_url)
+                                           url=self.endpoint_url,
+                                           next_token_marker='marker')
 
     def get_user_by_name(self, user_name):
         """The user configured in SSO.
