@@ -23,3 +23,9 @@
 ------------------
 
 * Bumped dependencies
+
+
+0.1.2 (18-11-2020)
+------------------
+
+* Fixed bug regarding permission sets
