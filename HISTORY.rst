@@ -29,3 +29,9 @@
 ------------------
 
 * Fixed bug regarding permission sets
+
+
+0.2.0 (02-12-2020)
+------------------
+
+* Bumped awsauthenticationlib
