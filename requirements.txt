@@ -7,4 +7,4 @@
 #
 # Please use Pipfile to update the requirements.
 #
-awsauthenticationlib~=0.0.3
+awsauthenticationlib~=0.1.0
