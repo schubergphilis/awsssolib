@@ -35,3 +35,9 @@
 ------------------
 
 * Bumped awsauthenticationlib
+
+
+0.3.0 (25-01-2021)
+------------------
+
+* Bumped awsauthenticationlib
