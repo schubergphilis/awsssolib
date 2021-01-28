@@ -92,8 +92,8 @@ class Sso(LoggerMixin):  # pylint: disable=too-many-public-methods
     API_CONTENT_ENCODING = 'amz-1.0'
     DEFAULT_AWS_REGION = 'eu-west-1'
 
-    def __init__(self, arn):
-        self.aws_authenticator = AwsAuthenticator(arn)
+    def __init__(self, arn, region=None):
+        self.aws_authenticator = AwsAuthenticator(arn, region=region)
         self._urls = Urls(self.aws_region)
         self.session = self._get_authenticated_session()
         self._directory_id = None
