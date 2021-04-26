@@ -7,6 +7,11 @@ A template to create python libraries
 
 * Documentation: https://awsssolib.readthedocs.org/en/latest
 
+DEPRECATION WARNING
+===================
+
+This library is now part https://github.com/schubergphilis/awsapilib and thus all development on this repo will stop.
+
 
 Development Workflow
 ====================
