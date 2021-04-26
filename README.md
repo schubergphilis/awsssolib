@@ -1,6 +1,13 @@
 # awsssolib
 A library to help automate AWS SSO activities as it is still not supported by Boto
 
+DEPRECATION WARNING
+===================
+
+This library is now part https://github.com/schubergphilis/awsapilib and thus all development on this repo will stop.
+
+
+
 The library supports below AWS SSO actions:
 
 1. Get Groups
@@ -25,4 +32,4 @@ sso_connection = Sso('arn:aws:iam::<<account_id>>:role/<<role_name>>')
 for group in sso_connection.groups:
      print(group.name)
 ```
-The role should have access to sso and sso-directory 
+The role should have access to sso and sso-directory
